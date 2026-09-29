@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tu rachètes ou tu passes ?</title>
+<style>
+  :root {
+    --noir: #1c1c1c; --fond-carte: #000; --jaune: #ffe600; --blanc: #fff;
+    --gris: #a8a8a8; --gris-ligne: #333; --vert: #3ddc84; --rouge: #ff4b4b;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #000; color: var(--blanc); font-family: var(--sans); overflow: hidden; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; background: var(--noir); }
+  #stage::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 20% 0%, rgba(255,230,0,.07), transparent 55%); pointer-events: none; }
+  .ecran { position: absolute; inset: 0; display: none; padding: 43.2px 96px; }
+  .ecran.actif { display: flex; flex-direction: column; }
+  .bande { position: absolute; z-index: 1; left: 0; top: 0; bottom: 0; width: 23px; background: var(--jaune); }
+  .pied { position: absolute; bottom: 27px; left: 96px; right: 96px; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 15.1px; color: var(--gris); letter-spacing: .06em; }
+
+  .titre { justify-content: center; }
+  .pile { position: absolute; right: 190px; top: 50%; width: 420px; height: 600px; transform: translateY(-52%); }
+  .pile div { position: absolute; inset: 0; border-radius: 28px; background: #000; border: 3px solid var(--c); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .pile div:nth-child(1) { --c: #a6f04a; transform: rotate(-14deg) translate(-70px, 10px); opacity: .45; }
+  .pile div:nth-child(2) { --c: #5ad8e6; transform: rotate(-7deg) translate(-35px, 5px); opacity: .65; }
+  .pile div:nth-child(3) { --c: #ff8a3d; transform: rotate(3deg); opacity: .85; }
+  .pile div:nth-child(4) { --c: var(--jaune); transform: rotate(9deg) translate(30px, -6px); }
+  .pile div:nth-child(4)::before { content: "?"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 360px; font-weight: 900; color: var(--jaune); }
+  .pile .ico { position: absolute; top: auto; inset: auto; bottom: -50px; width: 96px; height: 96px; border-radius: 50%; background: var(--noir); border: 5px solid; display: flex; align-items: center; justify-content: center; font-size: 46px; font-weight: 800; transform: none; opacity: 1; box-shadow: none; }
+  .pile .ico.non { left: 60px; color: var(--rouge); border-color: var(--rouge); }
+  .pile .ico.oui { right: 60px; color: var(--vert); border-color: var(--vert); }
+  .titre h1 { font-size: 108px; line-height: 1; font-weight: 800; letter-spacing: -.02em; max-width: 1536px; }
+  .titre p { margin-top: 32.4px; font-size: 32.4px; color: var(--gris); }
+  .texte h2 { font-size: 64.8px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 43.2px; }
+  .texte ol { list-style: none; font-size: 38.9px; line-height: 1.35; max-width: 1612.8px; }
+  .texte li { padding: 21.6px 0; border-top: 1px solid var(--gris-ligne); }
+  .texte li:first-child { border-top: 0; }
+  .texte li strong { color: var(--jaune); font-weight: 700; }
+  .texte .note { margin-top: 32.4px; font-size: 30.2px; color: var(--blanc); background: #000; border-radius: 20px; padding: 22px 30px; max-width: 1612.8px; line-height: 1.4; }
+
+  /* Scène dossier : carte + panneau d'analyse */
+  .scene { flex: 1; display: flex; align-items: stretch; justify-content: center; gap: 38.4px; }
+  .carte {
+    position: relative; width: 1728px; height: 950.4px; background: var(--fond-carte); border-radius: 28.1px;
+    display: grid; grid-template-columns: 27fr 73fr; overflow: hidden; flex: none;
+    box-shadow: 0 21.6px 64.8px rgba(0,0,0,.6);
+    transition: width .7s cubic-bezier(.4,0,.2,1), grid-template-columns .7s;
+  }
+  .profil { position: relative; background: linear-gradient(180deg, #2a2a2a 0%, #0d0d0d 100%); padding: 32.4px 38.4px; display: flex; flex-direction: column; overflow: hidden; }
+  .photo { height: 280.8px; border-radius: 21.6px; background: radial-gradient(circle at 50% 40%, #3a3a3a, #141414); display: flex; align-items: center; justify-content: center; }
+  .photo svg { width: 55%; height: 55%; color: var(--accent); }
+  .identite { margin-top: 23.8px; }
+  .identite h2 { font-size: 42.1px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; }
+  .identite h2 span { font-weight: 400; color: var(--gris); white-space: nowrap; }
+  .identite .distance { font-size: 21.6px; color: var(--gris); margin-top: 8.6px; }
+  .bio { margin-top: 21.6px; font-size: 23.8px; line-height: 1.35; font-style: italic; color: #ddd; }
+  .tags { margin-top: 21.6px; display: flex; flex-wrap: wrap; gap: 8.6px; }
+  .tags span { font-size: 19.4px; padding: 6.5px 19.2px; border: 1px solid var(--accent); border-radius: 32.4px; color: #ddd; white-space: nowrap; }
+  .prix { margin-top: auto; background: var(--accent); color: #000; border-radius: 17.3px; padding: 17.3px 26.9px; }
+  .prix span { display: block; font-size: 19.4px; font-weight: 600; }
+  .prix strong { display: block; font-size: 54px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; }
+
+  .details { padding: 32.4px 46.1px 25.9px; padding-top: 40px; display: grid; grid-template-rows: auto 1fr auto; gap: 19.4px; min-width: 0; }
+  .entete-details { display: flex; justify-content: space-between; align-items: center; min-height: 56px; }
+  .entete-details .droite { display: flex; align-items: center; gap: 16px; }
+  .entete-details h3 { font-size: 23.8px; font-weight: 700; color: var(--gris); }
+  .entete-details .rappel-prix { display: none; font-size: 25.9px; font-weight: 800; color: #000; background: var(--accent); padding: 5.4px 19.2px; border-radius: 10.8px; }
+  .colonnes { display: grid; grid-template-columns: 1fr 1.12fr 1fr; gap: 0 34.6px; }
+  .colonnes h4 { font-size: 22.7px; font-weight: 800; color: var(--accent); margin-bottom: 10.8px; padding-bottom: 8.6px; border-bottom: 2px solid var(--accent); }
+  .colonnes dl { font-size: 24.3px; line-height: 1.25; }
+  .colonnes dl div { display: flex; justify-content: space-between; gap: 15.4px; padding: 8.6px 9.6px; margin: 0 -9.6px; border-bottom: 1px solid #262626; border-radius: 8.6px; transition: background .3s, color .3s; }
+  .colonnes dt { color: var(--gris); }
+  .colonnes dd { text-align: right; font-weight: 700; white-space: nowrap; }
+  .colonnes dd small { display: block; font-weight: 400; color: var(--gris); font-size: 20px; white-space: nowrap; }
+  .colonnes dd small.l { white-space: normal; }
+  .colonnes dl div.hl { background: var(--accent); color: #000; }
+  .colonnes dl div.hl dt, .colonnes dl div.hl dd small { color: #333; }
+  .colonnes dl div.hl dd { color: #000; }
+  .cadre { display: flex; gap: 19.2px; }
+  .cadre div { flex: 1; background: #161616; border-radius: 15.1px; padding: 14px 19.2px; font-size: 22.1px; transition: background .3s, color .3s; }
+  .cadre span { display: block; color: var(--gris); font-size: 18.4px; margin-bottom: 3.2px; }
+  .cadre b { font-weight: 700; }
+  .cadre div.hl { background: var(--accent); color: #000; }
+  .cadre div.hl span { color: #333; }
+
+  .boutons { display: flex; gap: 16px; }
+  .boutons div { width: 56px; height: 56px; border-radius: 50%; border: 3.8px solid; display: flex; align-items: center; justify-content: center; font-size: 32.4px; font-weight: 800; cursor: pointer; }
+  .boutons .non { border-color: var(--rouge); color: var(--rouge); }
+  .boutons .oui { border-color: var(--vert); color: var(--vert); }
+
+  .tampon { position: absolute; top: 86.4px; left: 50%; transform: translateX(-50%) rotate(-14deg) scale(.6); padding: 10.8px 38.4px; border: 9.7px solid; border-radius: 21.6px; font-size: 129.6px; font-weight: 900; line-height: 1; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; background: rgba(0,0,0,.35); z-index: 2; }
+  .tampon.achete { color: var(--vert); border-color: var(--vert); }
+  .tampon.passe { color: var(--rouge); border-color: var(--rouge); }
+  .tampon.visible { opacity: 1; transform: translateX(-50%) rotate(-14deg) scale(1); }
+
+  /* Mode révélation : la carte se resserre à gauche, le panneau arrive à droite */
+  .panneau { width: 0; opacity: 0; overflow: hidden; display: flex; flex-direction: column; gap: 12px; height: 950.4px; transition: width .7s cubic-bezier(.4,0,.2,1), opacity .5s .3s; flex: none; }
+  .ecran.revele .carte { width: 1036.8px; grid-template-columns: 0fr 1fr; }
+  .ecran.revele .profil { padding: 0; }
+  .ecran.revele .boutons, .ecran.revele .tampon { display: none; }
+  .ecran.revele .entete-details .rappel-prix { display: block; }
+  .ecran.revele .details { padding: 25.9px 34.6px 21.6px; }
+  .ecran.revele .colonnes { gap: 0 23px; }
+  .ecran.revele .colonnes dl { font-size: 22.7px; }
+  .ecran.revele .colonnes dd small { font-size: 17.3px; }
+  .ecran.revele .cadre div { font-size: 19.4px; padding: 10.8px 15.4px; }
+  .ecran.revele .panneau { width: 652.8px; opacity: 1; }
+
+  .panneau .haut h2 { font-size: 58px; font-weight: 900; line-height: 1; letter-spacing: -.03em; color: var(--jaune); }
+  .panneau .match { font-size: 19.4px; padding: 6.5px 19.2px; border-radius: 43.2px; border: 3.2px solid; display: none; white-space: nowrap; }
+  .panneau .match.oui { display: block; color: var(--vert); border-color: var(--vert); }
+  .panneau .match.non { display: block; color: var(--rouge); border-color: var(--rouge); }
+  .encart { background: #000; border-radius: 21.6px; padding: 15px 26px; }
+  .encart h3 { font-size: 20.5px; font-weight: 800; color: var(--jaune); margin-bottom: 13px; }
+  .encart p { font-size: 23px; line-height: 1.35; }
+  .calcul ul { list-style: none; }
+  .calcul li { font-size: 21.5px; line-height: 1.3; padding: 9.7px 0; border-bottom: 1px solid #262626; display: flex; justify-content: space-between; gap: 19.2px; opacity: .18; transition: opacity .3s; }
+  .calcul li:last-child { border-bottom: 0; }
+  .calcul li.on { opacity: 1; }
+  .calcul li b { color: var(--accent); white-space: nowrap; }
+  .tip { background: var(--jaune); color: #000; opacity: 0; transform: translateY(10.8px); transition: opacity .4s, transform .4s; }
+  .tip.on { opacity: 1; transform: none; }
+  .tip h3 { color: #000; }
+  .tip p { font-weight: 700; }
+  .tip .bonus { margin-top: 10px; padding-top: 9px; border-top: 2px solid rgba(0,0,0,.25); font-weight: 400; font-size: 20px; }
+
+  .minuteur { position: absolute; left: 0; right: 0; top: 0; height: 10px; z-index: 3; }
+  .minuteur .barre { height: 100%; width: 100%; background: var(--accent); transform-origin: left; }
+  .minuteur .barre { transition: width 1s linear; }
+  .minuteur.pause .reste { color: var(--blanc); background: rgba(0,0,0,.85); }
+  .minuteur .reste { cursor: pointer; }
+  .minuteur.fin .barre { background: var(--rouge); width: 0; }
+  .minuteur .reste { position: absolute; left: 60px; top: 46px; font-family: var(--mono); font-size: 30px; font-weight: 700; color: var(--accent); background: rgba(0,0,0,.6); padding: 4px 12px; border-radius: 8px; }
+  .minuteur.fin .reste { color: var(--rouge); }
+  .ecran.revele .minuteur { display: none; }
+  .carte { transition: width .7s cubic-bezier(.4,0,.2,1), grid-template-columns .7s, opacity .5s, transform .5s; }
+  .ecran.en-vote .carte { opacity: 0; transform: scale(.92); pointer-events: none; }
+  .vote { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; z-index: 4; }
+  .ecran.en-vote .vote { display: flex; animation: pop .45s cubic-bezier(.2,.8,.2,1) both; }
+  .vote .club { font-size: 44px; color: var(--gris); }
+  .vote .club b { color: var(--blanc); font-weight: 800; }
+  .vote .question { font-size: 120px; font-weight: 900; letter-spacing: -.03em; line-height: 1; margin: 30px 0 60px; }
+  .vote .choix { display: flex; gap: 160px; }
+  .vote .choix div { display: flex; flex-direction: column; align-items: center; gap: 22px; font-size: 40px; font-weight: 800; cursor: pointer; }
+  .vote .choix span { width: 200px; height: 200px; border-radius: 50%; border: 10px solid; display: flex; align-items: center; justify-content: center; font-size: 100px; font-weight: 800; }
+  .vote .choix .non { color: var(--rouge); }
+  .vote .choix .oui { color: var(--vert); }
+  .vote .main { margin-top: 60px; font-size: 30px; color: var(--gris); }
+  .vote .tampon { top: 400px; }
+  .chrono { position: absolute; top: 32.4px; right: 96px; font-family: var(--mono); font-size: 36.7px; color: var(--jaune); display: none; z-index: 3; }
+  .chrono.visible { display: block; }
+  .chrono.fin { color: var(--rouge); }
+  .filigrane { position: absolute; left: 20px; bottom: 120px; font-size: 300px; font-weight: 900; line-height: 1; color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,.09); pointer-events: none; z-index: 0; letter-spacing: -.05em; }
+  .details { position: relative; }
+  .details > * { position: relative; z-index: 1; }
+  .details > .filigrane { position: absolute; z-index: 0; }
+  .carte { z-index: 1; }
+  .progression { position: absolute; bottom: 27px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+  .progression span { width: 12px; height: 12px; border-radius: 50%; background: #444; }
+  .progression span.fait { background: var(--jaune); }
+  .progression span.ici { background: var(--jaune); box-shadow: 0 0 0 4px rgba(255,230,0,.25); }
+  @keyframes pop { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  .ecran.revele .panneau .haut h2 { animation: pop .5s cubic-bezier(.2,.8,.2,1) both; }
+  .ecran.revele .encart:not(.tip) { animation: pop .45s .15s cubic-bezier(.2,.8,.2,1) both; }
+  .panneau .haut { display: flex; align-items: center; gap: 22px; }
+  .panneau .haut .icone { flex: none; width: 104px; height: 104px; border-radius: 50%; border: 9px solid; display: flex; align-items: center; justify-content: center; font-size: 54px; font-weight: 900; animation: pop .5s cubic-bezier(.2,.8,.2,1) both; }
+  .panneau .haut.achete .icone { color: var(--vert); border-color: var(--vert); background: rgba(61,220,132,.12); }
+  .panneau .haut.passe .icone { color: var(--rouge); border-color: var(--rouge); background: rgba(255,75,75,.12); }
+  .panneau .haut.achete h2 { color: var(--vert); }
+  .panneau .haut.passe h2 { color: var(--rouge); }
+  .panneau .haut .match { margin-top: 8px; display: none; }
+  .panneau .haut .match.oui, .panneau .haut .match.non { display: inline-block; }
+  .rappel-prix.hl { box-shadow: 0 0 0 5px #fff; }
+  .page1, .page2 { display: flex; flex-direction: column; gap: 12px; }
+  .page2 { display: none; }
+  .ecran.page2 .page1 { display: none; }
+  .ecran.page2 .page2 { display: flex; }
+  .fp { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fp ul { list-style: none; }
+  .fp li { font-size: 18.5px; line-height: 1.3; padding: 9px 0 9px 30px; border-bottom: 1px solid #262626; position: relative; }
+  .fp li:last-child { border-bottom: 0; }
+  .fp li::before { position: absolute; left: 0; top: 7px; font-weight: 900; font-size: 22px; }
+  .forts h3 { color: var(--vert); }
+  .forts li::before { content: "+"; color: var(--vert); }
+  .faibles h3 { color: var(--rouge); }
+  .faibles li::before { content: "−"; color: var(--rouge); }
+  .page2 .tip p { font-size: 25px; }
+  .page2 .tip .bonus { font-size: 20px; }
+  .bilan-final h2 { font-size: 64.8px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 36px; }
+  .bilan-final .ligne { display: grid; grid-template-columns: 110px 330px 1fr 300px; align-items: center; gap: 30px; background: #000; border-radius: 22px; padding: 24px 32px; margin-bottom: 18px; border-left: 12px solid var(--accent); }
+  .bilan-final .ligne .icone { width: 86px; height: 86px; border-radius: 50%; border: 8px solid; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 900; }
+  .bilan-final .ligne.achete .icone { color: var(--vert); border-color: var(--vert); }
+  .bilan-final .ligne.passe .icone { color: var(--rouge); border-color: var(--rouge); }
+  .bilan-final .nom { font-size: 38px; font-weight: 800; }
+  .bilan-final .nom small { display: block; font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .bilan-final .ligne.achete .nom small { color: var(--vert); }
+  .bilan-final .ligne.passe .nom small { color: var(--rouge); }
+  .bilan-final .pourquoi { font-size: 25px; line-height: 1.35; color: #ddd; }
+  .bilan-final .chiffres { text-align: right; font-size: 22px; color: var(--gris); }
+  .bilan-final .chiffres b { display: block; font-size: 36px; color: var(--blanc); }
+  .regles h2 { margin-bottom: 20px; }
+  .regles ol li { padding: 14px 0; font-size: 34px; }
+  .regles-encart { margin-top: 24px; background: #000; border-radius: 20px; padding: 22px 30px; max-width: 1610px; }
+  .regles-encart p { font-size: 25px; line-height: 1.38; margin-bottom: 12px; }
+  .regles-encart p:last-child { margin-bottom: 0; }
+  .regles-encart b { color: var(--jaune); }
+  .regles-encart .ex { border-top: 1px solid #333; padding-top: 12px; }
+  .colonnes dl { font-size: 20.5px !important; }
+  .colonnes dl div { padding: 4px 9.6px !important; }
+  .colonnes dd small { font-size: 16px !important; }
+  .colonnes dl div.fort { border-top: 2px solid #444; }
+  .colonnes dl div.fort dt, .colonnes dl div.fort dd { color: var(--blanc); font-weight: 800; }
+  .ecran.revele .colonnes dl { font-size: 18.5px !important; }
+  .ecran.sans-leurre .page1 > .encart:first-child { display: none; }
+  .jauge { display: none; }
+  .ecran.revele .jauge.on { display: block; }
+  .piste { position: relative; height: 165px; margin: 2px 20px 0; }
+  .rail { position: absolute; left: 0; right: 0; top: 76px; height: 12px; border-radius: 4px; background: #333; }
+  .zone { position: absolute; top: 70px; height: 24px; border-radius: 12px; opacity: .55; transition: left 1.2s cubic-bezier(.4,0,.2,1), width 1.2s cubic-bezier(.4,0,.2,1); }
+  .zone.gain { background: var(--vert); } .zone.perte { background: var(--rouge); }
+  .mk { position: absolute; top: 0; width: 0; height: 170px; }
+  .mk::before { content: ""; position: absolute; left: -4px; top: 58px; width: 8px; height: 48px; border-radius: 3px; background: currentColor; }
+  .mk span, .mk b { position: absolute; left: 0; transform: translateX(-50%); white-space: nowrap; font-size: 20px; }
+  .mk b { font-size: 28px; font-weight: 800; }
+  .mk.g span, .mk.g b { transform: translateX(-100%) translateX(8px); text-align: right; }
+  .mk.d span, .mk.d b { transform: translateX(-8px); }
+  .mk-prix { color: var(--blanc); } .mk-prix span { top: -2px; } .mk-prix b { top: 20px; }
+  .mk-naif { color: #888; } .mk-naif span, .mk-vraie span { top: 112px; } .mk-naif b, .mk-vraie b { top: 134px; font-size: 28px; }
+  .mk-naif span { color: #888; }
+  .mk-vraie { transition: left 1.2s cubic-bezier(.4,0,.2,1); z-index: 2; }
+  .mk-vraie.gain { color: var(--vert); } .mk-vraie.perte { color: var(--rouge); }
+  .mk-vraie::before { width: 14px; left: -7px; top: 50px; height: 64px; border-radius: 7px; }
+  .minuteur.urgent .reste { color: var(--rouge); animation: pulse .5s ease-in-out infinite alternate; }
+  .minuteur.urgent .barre { background: var(--rouge); }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.18); } }
+  .colonnes dl div.indice, .cadre div.indice { background: var(--accent); color: #000; animation: clign 1s ease-in-out infinite alternate; }
+  .colonnes dl div.indice dt, .colonnes dl div.indice dd small { color: #333; }
+  .colonnes dl div.indice dd { color: #000; }
+  @keyframes clign { from { box-shadow: 0 0 0 0 rgba(255,255,255,.0); } to { box-shadow: 0 0 0 6px rgba(255,255,255,.55); } }
+  .etiquette-indice { position: absolute; right: 150px; top: 62px; background: var(--accent); color: #000; font-weight: 900; font-size: 26px; padding: 8px 18px; border-radius: 30px; display: none; z-index: 3; }
+  .ecran.avec-indice .etiquette-indice { display: block; animation: pop .4s both; }
+  .son-coupe { position: absolute; top: 18px; right: 24px; font-family: var(--mono); font-size: 16px; color: var(--gris); display: none; z-index: 9; }
+  body.muet .son-coupe { display: block; }
+  .logo-previbiz { position: absolute; right: 96px; bottom: 64px; height: 46px; opacity: .45; }
+  .annexe { padding: 40px 96px 60px; }
+  .annexe-tete { margin-bottom: 18px; }
+  .annexe-tag { font-family: var(--mono); font-size: 16px; color: var(--jaune); letter-spacing: .1em; text-transform: uppercase; }
+  .annexe-tete h2 { font-size: 50px; font-weight: 800; letter-spacing: -.02em; margin: 6px 0 4px; }
+  .annexe-tete p { font-size: 22px; color: var(--gris); }
+  .annexe-corps { display: grid; grid-template-columns: 1120px 1fr; gap: 36px; align-items: start; }
+  .annexe-g { background: #000; border-radius: 22px; padding: 18px 0 30px; display: flex; justify-content: center; }
+  .annexe-d { display: flex; flex-direction: column; gap: 14px; }
+  .abox { background: #000; border-radius: 18px; padding: 18px 22px; border-left: 8px solid #555; }
+  .abox.v { border-color: var(--vert); } .abox.r { border-color: var(--rouge); } .abox.j { border-color: var(--jaune); }
+  .abox h3 { font-size: 22px; font-weight: 800; color: var(--jaune); margin-bottom: 8px; }
+  .abox p, .abox li { font-size: 21px; line-height: 1.38; color: #eee; }
+  .abox p + p { margin-top: 8px; }
+  .abox ul { padding-left: 22px; } .abox b { color: #fff; }
+  .formule-a { font-size: 24px !important; font-weight: 800; color: var(--jaune) !important; }
+  .tuiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 30px; }
+  .tuile { background: #000; border-radius: 20px; padding: 34px 28px; cursor: pointer; border: 3px solid #333; transition: border-color .2s, transform .2s; }
+  .tuile:hover { border-color: var(--jaune); transform: translateY(-4px); }
+  .tuile b { display: block; font-size: 54px; font-weight: 900; color: var(--jaune); }
+  .tuile span { font-size: 28px; font-weight: 700; }
+  .grille-pieges { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 20px; width: 100%; }
+  .piegebilan { background: #141414; border-radius: 16px; padding: 14px 18px; display: grid; grid-template-columns: 220px 1fr; grid-template-rows: auto 1fr; column-gap: 12px; }
+  .piegebilan h4 { grid-column: 1 / 3; font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .piegebilan p { font-size: 18px; line-height: 1.35; color: #ddd; align-self: center; }
+  table.cas { width: 100%; border-collapse: separate; border-spacing: 0 12px; margin-top: 10px; }
+  table.cas th { text-align: left; font-size: 18px; color: var(--gris); font-weight: 600; padding: 0 18px; }
+  table.cas td { background: #000; padding: 22px 18px; font-size: 24px; }
+  table.cas td:first-child { border-radius: 16px 0 0 16px; } table.cas td:last-child { border-radius: 0 16px 16px 0; }
+  table.cas td.n { font-weight: 900; font-size: 30px; white-space: nowrap; } table.cas td.g { color: #888; }
+  .ic { display: inline-flex; width: 56px; height: 56px; border-radius: 50%; border: 5px solid; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; }
+  .tuiles { grid-template-columns: repeat(5, 1fr) !important; gap: 18px !important; }
+  .tuile { padding: 24px 22px !important; }
+  .tuile b { font-size: 42px !important; } .tuile span { font-size: 24px !important; }
+  table.tf { width: 1080px; border-collapse: collapse; margin: 0 20px; }
+  table.tf th { font-size: 24px; text-align: left; padding: 10px 14px; color: var(--jaune); }
+  table.tf th small { font-size: 17px; color: var(--gris); font-weight: 400; }
+  table.tf td { font-size: 20px; padding: 13px 14px; border-top: 1px solid #262626; color: #eee; }
+  table.tf td:first-child { color: var(--gris); width: 290px; }
+  table.tf td.o { color: var(--vert); font-weight: 700; } table.tf td.x { color: var(--rouge); font-weight: 700; }
+  .jauges { display: flex; flex-direction: column; gap: 14px; padding: 10px 0; }
+  .aide { background: rgba(0,0,0,.92); color: var(--blanc) !important; font-size: 22px !important; line-height: 1.7; padding: 26px 34px; border-radius: 18px; border: 2px solid var(--jaune); top: 40px !important; left: 96px !important; font-family: var(--sans) !important; }
+  .aide { z-index: 20 !important; background: #0b0b0b !important; }
+  .aide-titre { font-weight: 800; font-size: 26px; margin-bottom: 10px; }
+  .aide .r { display: grid; grid-template-columns: 170px 1fr; }
+  .aide b { color: var(--jaune); font-family: var(--mono); }
+  .aide { position: absolute; top: 21.6px; left: 96px; font-family: var(--mono); font-size: 16.2px; color: var(--gris); display: none; z-index: 3; }
+  body.aide-visible .aide { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+<div class="aide"><div class="aide-titre">Mémo des touches</div><div class="r"><b>→ ou espace</b><span>écran suivant, ligne suivante de l'analyse</span></div><div class="r"><b>←</b><span>retour</span></div><div class="r"><b>A</b><span>la salle achète</span></div><div class="r"><b>P</b><span>la salle passe</span></div><div class="r"><b>I</b><span>joker indice (pendant la lecture)</span></div><div class="r"><b>T</b><span>pause ou reprise du chrono (ou clic sur le compteur)</span></div><div class="r"><b>R</b><span>remettre le chrono à 2:30</span></div><div class="r"><b>S</b><span>couper ou remettre le son</span></div><div class="r"><b>F</b><span>plein écran</span></div><div class="r"><b>X</b><span>annexes : aller au sommaire / revenir au quiz</span></div><div class="r"><b>H</b><span>afficher ou masquer ce mémo</span></div></div><div class="son-coupe">SON COUPÉ</div>
+
+<section class="ecran titre actif">
+  <div class="bande"></div>
+  <div class="pile"><div></div><div></div><div></div><div></div><div class="ico non">✕</div><div class="ico oui">♥</div></div>
+  <h1>Tu rachètes<br>ou tu passes ?</h1>
+  <p>Quatre clubs à vendre. Vous votez à main levée. Tout est sur la carte.</p>
+  <img class="logo-previbiz" alt="Previbiz" src="data:image/png;base64,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"><div class="pied"><span>PIMP MY GYM · MARBELLA · 4 OCTOBRE 2026</span><span>Maxence Corlouër · Previbiz</span></div>
+</section>
+
+<section class="ecran texte regles">
+  <div class="bande"></div>
+  <h2>La règle du jeu</h2>
+  <ol>
+    <li><strong>Quatre clubs à vendre.</strong> Chacun sur une carte, avec ses chiffres et son prix. Deux minutes trente pour lire.</li>
+    <li><strong>Vous votez à main levée.</strong> J'achète si le club vaut au moins son prix, et que cette valeur va tenir. Je passe si le prix est trop haut, ou si la valeur est en train de fondre. La majorité décide.</li>
+    <li><strong>Tout est sur la carte.</strong> Rien n'est caché.</li>
+    <li><strong>Le prix est celui des titres,</strong> pas du fonds de commerce. Convention du jeu : <strong>valeur = 4 × EBE retraité - dette nette.</strong></li>
+  </ol>
+  <div class="regles-encart">
+    <p><b>EBE retraité</b> = EBE + ce que le repreneur ne paiera plus (salaire du dirigeant au-delà d'un gérant à 55 k€ chargés, avantages personnels, loyers de leasing) - ce qu'il paiera en plus (remplacer un dirigeant sous-payé, un coach coûte 35 k€ à plein temps) - ce qui ne se reproduira pas.</p>
+    <p><b>Dette nette</b> = emprunts + leasing restant dû + compte courant dû au cédant - trésorerie.</p>
+    <p class="ex"><b>Exemple</b> : EBE 80 k€. Le dirigeant se verse 75 k€ chargés, alors qu'un gérant coûte 55 k€ : le repreneur économisera 20 k€ par an, on les rajoute. EBE retraité = 80 k€ + 20 k€ = 100 k€. Emprunt 80 k€, trésorerie 30 k€ : dette nette = 50 k€. Valeur = 4 × 100 k€ - 50 k€ = <b>350 k€</b>. Demandé 300 k€ : j'achète. Demandé 400 k€ : je passe.</p>
+  </div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA</span><span>RÈGLES</span></div>
+</section>
+
+<!-- ===================== DOSSIER A ===================== -->
+<section class="ecran" style="--accent:#ffe600" data-dossier="A" data-prix="420" data-valeur="554" data-naif="314" data-naif-label="Sans retraiter" data-indice="excep" data-num="01" data-verdict="achete" data-leurre="resultat,treso,cc,excep">
+  <div class="bande"></div>
+  <div class="vote">
+    <div class="tampon"></div>
+    <div class="club"><b>Iron Park</b> · 420 000 €</div>
+    <div class="question">Tu rachètes<br>ou tu passes ?</div>
+    <div class="choix"><div class="non"><span>✕</span>Je passe</div><div class="oui"><span>♥</span>J'achète</div></div>
+    <div class="main">À main levée. La majorité décide.</div>
+  </div>
+  <div class="scene">
+  <div class="carte">
+    <div class="etiquette-indice">Indice</div>
+    <div class="minuteur"><div class="barre"></div><div class="reste">2:30</div></div>
+    <div class="tampon"></div>
+    <div class="profil">
+      <div class="photo"><svg viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><rect x="8" y="18" width="10" height="24" rx="2"/><rect x="18" y="12" width="8" height="36" rx="2"/><rect x="82" y="18" width="10" height="24" rx="2"/><rect x="74" y="12" width="8" height="36" rx="2"/><line x1="26" y1="30" x2="74" y2="30"/></svg></div>
+      <div class="identite"><h2>Iron Park <span>9 ans</span></h2><div class="distance">À 6 minutes de chez vous</div></div>
+      <p class="bio">« Club familial, ambiance au top, clientèle fidèle. Je vends pour changer de vie. »</p>
+      <div class="tags"><span>Indépendant</span><span>1 000 m²</span><span>Musculation, cardio, cours</span></div>
+      <div class="prix"><span>Prix demandé</span><strong>420 000 €</strong></div>
+    </div>
+    <div class="details">
+      <div class="filigrane">01</div>
+      <div class="entete-details"><h3>Iron Park</h3><div class="droite"><div class="rappel-prix" data-l="prix">Prix demandé 420 000 €</div><div class="boutons"><div class="non">✕</div><div class="oui">♥</div></div></div></div>
+      <div class="colonnes">
+        <div><h4>Activité</h4><dl>
+          <div data-l="adherents"><dt>Adhérents</dt><dd>950 <small>n-1 : 930</small></dd></div>
+          <div data-l="nouveaux"><dt>Nouveaux sur 12 mois</dt><dd>440</dd></div>
+          <div data-l="passages"><dt>Passages par mois</dt><dd>5 700 <small>n-1 : 5 300</small></dd></div>
+          <div data-l="tarif"><dt>Tarif moyen</dt><dd>42 €</dd></div>
+          <div data-l="google"><dt>Note Google</dt><dd>4,4</dd></div>
+        </dl></div>
+        <div><h4>Compte de résultat</h4><dl>
+          <div data-l="ca"><dt>Chiffre d'affaires</dt><dd>520 k€ <small>n-1 : 505 k€</small></dd></div>
+          <div data-l="sub"><dt>Subventions d'exploitation</dt><dd>0</dd></div>
+          <div data-l="ms"><dt>Masse salariale hors dirigeant</dt><dd>165 k€</dd></div>
+          <div data-l="dirigeant"><dt>Dirigeant</dt><dd>100 k€ chargés <small class="l">gérant</small></dd></div>
+          <div data-l="avantages"><dt>Avantages du dirigeant</dt><dd>15 k€ <small class="l">véhicule, frais</small></dd></div>
+          <div data-l="loyer"><dt>Loyer complet</dt><dd>72 k€</dd></div>
+          <div data-l="leasingcr"><dt>Loyers de leasing</dt><dd>0</dd></div>
+          <div data-l="autres"><dt>Autres charges</dt><dd>78 k€</dd></div>
+          <div data-l="ebe" class="fort"><dt>EBE</dt><dd>90 k€</dd></div>
+          <div data-l="dap"><dt>Amortissements</dt><dd>32 k€</dd></div>
+          <div data-l="interets"><dt>Intérêts d'emprunt</dt><dd>3 k€</dd></div>
+          <div data-l="excep"><dt>Résultat exceptionnel</dt><dd>-35 k€ <small class="l">mise au rebut de matériel</small></dd></div>
+          <div data-l="is"><dt>Impôt sur les sociétés</dt><dd>3 k€</dd></div>
+          <div data-l="resultat"><dt>Résultat net</dt><dd>17 k€ <small>n-1 : 44 k€</small></dd></div>
+        </dl></div>
+        <div><h4>Bilan</h4><dl>
+          <div data-l="creances"><dt>Créances adhérents</dt><dd>20 k€ <small>n-1 : 20 k€</small></dd></div>
+          <div data-l="pca"><dt>Produits constatés d'avance</dt><dd>40 k€ <small>n-1 : 40 k€</small></dd></div>
+          <div data-l="cc"><dt>Compte courant du dirigeant</dt><dd>0 <small>n-1 : 45 k€</small></dd></div>
+          <div data-l="treso"><dt>Trésorerie</dt><dd>12 k€ <small>n-1 : 30 k€</small></dd></div>
+          <div data-l="div"><dt>Dividendes versés</dt><dd>0</dd></div>
+          <div data-l="emprunt"><dt>Emprunt restant dû</dt><dd>58 k€ <small class="l">5 000 € par mois, fin dans 12 mois. Capital remboursé cette année : 57 k€</small></dd></div>
+          <div data-l="leasing"><dt>Leasing restant dû</dt><dd>0</dd></div>
+        </dl></div>
+      </div>
+      <div class="cadre">
+        <div data-l="bail"><span>Bail</span><b>7 ans restants</b></div>
+        <div data-l="equipe"><span>Équipe</span><b>5 salariés + le dirigeant</b></div>
+        <div data-l="materiel"><span>Matériel</span><b>4 ans</b></div>
+        <div data-l="inv"><span>Investi cette année</span><b>0</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="panneau">
+    <div class="haut achete"><div class="icone">♥</div><div><h2>Fallait y aller</h2><div class="match"></div></div></div>
+    <div class="page1">
+    <div class="encart"><h3>Le leurre</h3><p>17 k€ de résultat net, en chute de 60 %, 12 k€ en banque, 45 k€ de compte courant retirés. Et sans retraiter : 4 × 90 k€ d'EBE − 46 k€ de dette nette = 314 k€, bien moins que les 420 k€ demandés. On passe.</p></div>
+    <div class="encart calcul"><h3>Le calcul</h3><ul>
+      <li data-ref="excep">Mise au rebut de 35 k€ : charge exceptionnelle, sans sortie de cash, qui ne se reproduira pas. Elle n'est pas dans l'EBE<b>écartée</b></li>
+      <li data-ref="resultat,dap,excep">Cash généré (CAF) : résultat net 17 k€ + amortissements 32 k€ + mise au rebut 35 k€, deux charges sans sortie d'argent<b>84 k€</b></li>
+      <li data-ref="treso,cc,emprunt">Remboursés : 57 k€ de capital d'emprunt + 45 k€ de compte courant = 102 k€. Trésorerie : 30 k€ + 84 k€ − 102 k€ = 12 k€<b>−18 k€</b></li>
+      <li data-ref="emprunt">Emprunt soldé dans 12 mois : 5 000 € × 12 = 60 k€ par an qui ne sortiront plus de la trésorerie<b>+60 k€ par an</b></li>
+      <li data-ref="ebe,dirigeant,avantages">EBE 90 k€ + dirigeant 45 k€ (100 k€ pour un gérant à 55 k€) + avantages 15 k€<b>EBE retraité 150 k€</b></li>
+      <li data-ref="prix,emprunt,treso">4 × 150 k€ − dette nette 46 k€ (emprunt 58 k€ − trésorerie 12 k€)<b>554 k€</b></li>
+    </ul></div>
+    </div>
+    <div class="page2">
+    <div class="encart jauge"><h3>Le prix face à la valeur</h3><div class="piste"><div class="zone"></div><div class="rail"></div><div class="mk mk-prix"><span>Prix demandé</span><b></b></div><div class="mk mk-naif"><span>Le leurre</span><b></b></div><div class="mk mk-vraie"><span>Vraie valeur</span><b></b></div></div></div>
+    <div class="fp"><div class="encart forts"><h3>Points forts</h3><ul><li>Adhérents et passages en hausse, note 4,4</li><li>Loyer 14 %, masse salariale 32 %</li><li>Dirigeant payé 45 k€ de plus qu'un gérant, et 15 k€ d'avantages : 60 k€ à réintégrer dans l'EBE</li><li>Emprunt soldé dans 12 mois : +60 k€ de cash par an</li></ul></div><div class="encart faibles"><h3>Points faibles</h3><ul><li>12 k€ de trésorerie la première année</li><li>Résultat net de 44 k€ à 17 k€ : à expliquer au banquier</li></ul></div></div>
+    <div class="encart tip"><h3>Synthèse</h3><p>Valeur 554 k€ pour 420 k€ demandés.</p><p class="bonus">Un résultat plombé par de l'exceptionnel et une trésorerie vidée par des remboursements : c'est l'EBE retraité qui compte.</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="progression"><span class="ici"></span><span></span><span></span><span></span></div><div class="pied"><span>DOSSIER 1 SUR 4</span><span>J'ACHÈTE OU JE PASSE ?</span></div>
+</section>
+
+<!-- ===================== DOSSIER B ===================== -->
+<section class="ecran" style="--accent:#ff8a3d" data-dossier="B" data-prix="520" data-valeur="286" data-naif="626" data-naif-label="Sans voir les pièges" data-indice="creances" data-num="02" data-verdict="passe" data-leurre="resultat,dirigeant,avantages">
+  <div class="bande"></div>
+  <div class="vote">
+    <div class="tampon"></div>
+    <div class="club"><b>Le Loft</b> · 520 000 €</div>
+    <div class="question">Tu rachètes<br>ou tu passes ?</div>
+    <div class="choix"><div class="non"><span>✕</span>Je passe</div><div class="oui"><span>♥</span>J'achète</div></div>
+    <div class="main">À main levée. La majorité décide.</div>
+  </div>
+  <div class="scene">
+  <div class="carte">
+    <div class="etiquette-indice">Indice</div>
+    <div class="minuteur"><div class="barre"></div><div class="reste">2:30</div></div>
+    <div class="tampon"></div>
+    <div class="profil">
+      <div class="photo"><svg viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 50 L10 22 L30 22 L30 50"/><path d="M40 50 L40 10 L60 10 L60 50"/><path d="M70 50 L70 30 L90 30 L90 50"/><line x1="5" y1="50" x2="95" y2="50"/></svg></div>
+      <div class="identite"><h2>Le Loft <span>12 ans</span></h2><div class="distance">Centre de Paris · à 4 min de chez vous</div></div>
+      <p class="bio">« Premium en plein centre, clientèle haut de gamme. Cause : nouveau projet. »</p>
+      <div class="tags"><span>Indépendant</span><span>550 m²</span><span>Coaching premium, petits groupes</span></div>
+      <div class="prix"><span>Prix demandé</span><strong>520 000 €</strong></div>
+    </div>
+    <div class="details">
+      <div class="filigrane">02</div>
+      <div class="entete-details"><h3>Le Loft</h3><div class="droite"><div class="rappel-prix" data-l="prix">Prix demandé 520 000 €</div><div class="boutons"><div class="non">✕</div><div class="oui">♥</div></div></div></div>
+      <div class="colonnes">
+        <div><h4>Activité</h4><dl>
+          <div data-l="adherents"><dt>Adhérents</dt><dd>480 <small>n-1 : 485</small></dd></div>
+          <div data-l="nouveaux"><dt>Nouveaux sur 12 mois</dt><dd>255</dd></div>
+          <div data-l="passages"><dt>Passages par mois</dt><dd>2 400 <small>n-1 : 2 500</small></dd></div>
+          <div data-l="tarif"><dt>Tarif moyen</dt><dd>110 € <small class="l">prélèvement mensuel</small></dd></div>
+          <div data-l="google"><dt>Note Google</dt><dd>4,2</dd></div>
+        </dl></div>
+        <div><h4>Compte de résultat</h4><dl>
+          <div data-l="ca"><dt>Chiffre d'affaires</dt><dd>640 k€ <small>n-1 : 600 k€</small></dd></div>
+          <div data-l="sub"><dt>Subventions d'exploitation</dt><dd>25 k€ <small>aide à l'embauche, fin 12/2026</small></dd></div>
+          <div data-l="ms"><dt>Masse salariale hors dirigeant</dt><dd>205 k€</dd></div>
+          <div data-l="dirigeant"><dt>Dirigeant</dt><dd>120 k€ chargés <small class="l">gérant</small></dd></div>
+          <div data-l="avantages"><dt>Avantages du dirigeant</dt><dd>15 k€ <small>véhicule, frais perso</small></dd></div>
+          <div data-l="loyer"><dt>Loyer complet</dt><dd>96 k€</dd></div>
+          <div data-l="leasingcr"><dt>Loyers de leasing</dt><dd>18 k€</dd></div>
+          <div data-l="autres"><dt>Autres charges</dt><dd>121 k€</dd></div>
+          <div data-l="ebe" class="fort"><dt>EBE</dt><dd>90 k€</dd></div>
+          <div data-l="dap"><dt>Amortissements</dt><dd>35 k€</dd></div>
+          <div data-l="interets"><dt>Intérêts d'emprunt</dt><dd>5 k€</dd></div>
+          <div data-l="excep"><dt>Résultat exceptionnel</dt><dd>+40 k€ <small>abandon de compte courant</small></dd></div>
+          <div data-l="is"><dt>Impôt sur les sociétés</dt><dd>18 k€</dd></div>
+          <div data-l="resultat"><dt>Résultat net</dt><dd>72 k€ <small>n-1 : -5 k€</small></dd></div>
+        </dl></div>
+        <div><h4>Bilan</h4><dl>
+          <div data-l="creances"><dt>Créances adhérents</dt><dd>70 k€ <small>n-1 : 30 k€</small></dd></div>
+          <div data-l="pca"><dt>Produits constatés d'avance</dt><dd>65 k€ <small>n-1 : 95 k€</small></dd></div>
+          <div data-l="cc"><dt>Compte courant du dirigeant</dt><dd>0 <small>n-1 : 40 k€</small></dd></div>
+          <div data-l="treso"><dt>Trésorerie</dt><dd>20 k€ <small>n-1 : 69 k€</small></dd></div>
+          <div data-l="div"><dt>Dividendes versés</dt><dd>0</dd></div>
+          <div data-l="emprunt"><dt>Emprunt restant dû</dt><dd>110 k€ <small class="l">3 600 € par mois, fin dans 31 mois</small></dd></div>
+          <div data-l="leasing"><dt>Leasing restant dû</dt><dd>36 k€ <small class="l">1 500 € par mois, 24 mois</small></dd></div>
+        </dl></div>
+      </div>
+      <div class="cadre">
+        <div data-l="bail"><span>Bail</span><b>6 ans restants</b></div>
+        <div data-l="equipe"><span>Équipe</span><b>6 salariés + le dirigeant</b></div>
+        <div data-l="materiel"><span>Matériel</span><b>4 ans</b></div>
+        <div data-l="inv"><span>Investi cette année</span><b>8 k€</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="panneau">
+    <div class="haut passe"><div class="icone">✕</div><div><h2>Fallait pas y aller</h2><div class="match"></div></div></div>
+    <div class="page1">
+    <div class="encart"><h3>Le leurre</h3><p>72 k€ de résultat net, un dirigeant à 120 k€ et 15 k€ d'avantages : près de 100 k€ à réintégrer. On trouve 626 k€, on achète.</p></div>
+    <div class="encart calcul"><h3>Le calcul</h3><ul>
+      <li data-ref="pca,adherents,ca">PCA (abonnements payés d'avance) 95 k€ → 65 k€ avec 5 adhérents de moins : 30 k€ du CA de l'an prochain comptés cette année<b>-30 k€</b></li>
+      <li data-ref="creances,tarif">Créances adhérents = ce que les adhérents doivent au club. En prélèvement mensuel, elles devraient rester stables. Elles passent de 30 k€ à 70 k€ : des prélèvements rejetés, comptés dans le CA mais jamais encaissés ni passés en perte. Sur ces 40 k€, 30 k€ sont irrécouvrables<b>-30 k€</b></li>
+      <li data-ref="sub">Aide à l'embauche de 25 k€ qui s'arrête en décembre<b>-25 k€</b></li>
+      <li data-ref="resultat,dap,excep,emprunt,inv,treso,creances,pca">Le cash le confirme. CAF 67 k€ (72 k€ + 35 k€ d'amortissements − 40 k€ d'abandon, sans cash) − 38 k€ de capital d'emprunt − 8 k€ d'investissements autofinancés − 40 k€ d'impayés − 30 k€ de PCA consommés<b>trésorerie −49 k€</b></li>
+      <li data-ref="ebe,dirigeant,avantages,leasingcr,cc,excep">EBE 90 k€ − 85 k€ de pièges + dirigeant 65 k€ (120 k€ pour un gérant à 55 k€) + avantages 15 k€ + leasing 18 k€. L'abandon du compte courant ne touche pas l'EBE<b>EBE retraité 103 k€</b></li>
+      <li data-ref="prix,emprunt,leasing,treso">4 × 103 k€ − dette nette 126 k€ (emprunt 110 k€ + leasing 36 k€ − trésorerie 20 k€)<b>286 k€</b></li>
+    </ul></div>
+    </div>
+    <div class="page2">
+    <div class="encart jauge"><h3>Le prix face à la valeur</h3><div class="piste"><div class="zone"></div><div class="rail"></div><div class="mk mk-prix"><span>Prix demandé</span><b></b></div><div class="mk mk-naif"><span>Le leurre</span><b></b></div><div class="mk mk-vraie"><span>Vraie valeur</span><b></b></div></div></div>
+    <div class="fp"><div class="encart forts"><h3>Points forts</h3><ul><li>Club premium en centre de Paris, 110 € de moyenne</li><li>Dirigeant payé 65 k€ de plus qu'un gérant, 15 k€ d'avantages, 18 k€ de leasing : 98 k€ à réintégrer</li><li>Bail 6 ans</li></ul></div><div class="encart faibles"><h3>Points faibles</h3><ul><li>30 k€ de PCA déjà consommés</li><li>40 k€ de créances en plus : des impayés</li><li>Une aide de 25 k€ qui s'arrête</li><li>Trésorerie de 69 k€ à 20 k€, compte courant abandonné</li></ul></div></div>
+    <div class="encart tip"><h3>Synthèse</h3><p>Valeur 286 k€ pour 520 k€ demandés.</p><p class="bonus">Trois pièges cumulés : PCA, impayés, aide. Le retraitement se fait dans les deux sens, sur la même carte.</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="progression"><span class="fait"></span><span class="ici"></span><span></span><span></span></div><div class="pied"><span>DOSSIER 2 SUR 4</span><span>J'ACHÈTE OU JE PASSE ?</span></div>
+</section>
+
+<!-- ===================== DOSSIER D ===================== -->
+<section class="ecran" style="--accent:#5ad8e6" data-dossier="D" data-prix="280" data-valeur="153" data-naif="401" data-naif-label="Sans voir les pièges" data-indice="bail" data-num="03" data-verdict="passe" data-leurre="ebe,div,dirigeant,emprunt">
+  <div class="bande"></div>
+  <div class="vote">
+    <div class="tampon"></div>
+    <div class="club"><b>Kinetik</b> · 280 000 €</div>
+    <div class="question">Tu rachètes<br>ou tu passes ?</div>
+    <div class="choix"><div class="non"><span>✕</span>Je passe</div><div class="oui"><span>♥</span>J'achète</div></div>
+    <div class="main">À main levée. La majorité décide.</div>
+  </div>
+  <div class="scene">
+  <div class="carte">
+    <div class="etiquette-indice">Indice</div>
+    <div class="minuteur"><div class="barre"></div><div class="reste">2:30</div></div>
+    <div class="tampon"></div>
+    <div class="profil">
+      <div class="photo"><svg viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="16" r="8"/><path d="M50 24 L50 40 L36 54"/><path d="M50 40 L64 54"/><path d="M30 34 L50 30 L70 34"/></svg></div>
+      <div class="identite"><h2>Kinetik <span>11 ans</span></h2><div class="distance">À 8 minutes de chez vous</div></div>
+      <p class="bio">« Club de quartier en pleine croissance, +100 adhérents cette année. Cause : départ en retraite. »</p>
+      <div class="tags"><span>Indépendant</span><span>700 m²</span><span>Cours collectifs, cardio</span></div>
+      <div class="prix"><span>Prix demandé</span><strong>280 000 €</strong></div>
+    </div>
+    <div class="details">
+      <div class="filigrane">03</div>
+      <div class="entete-details"><h3>Kinetik</h3><div class="droite"><div class="rappel-prix" data-l="prix">Prix demandé 280 000 €</div><div class="boutons"><div class="non">✕</div><div class="oui">♥</div></div></div></div>
+      <div class="colonnes">
+        <div><h4>Activité</h4><dl>
+          <div data-l="adherents"><dt>Adhérents</dt><dd>1 000 <small>n-1 : 900</small></dd></div>
+          <div data-l="nouveaux"><dt>Nouveaux sur 12 mois</dt><dd>610</dd></div>
+          <div data-l="passages"><dt>Passages par mois</dt><dd>6 000 <small>n-1 : 5 400</small></dd></div>
+          <div data-l="tarif"><dt>Tarif moyen</dt><dd>31 € <small class="l">400 adhérents de plus de 2 ans à 46 €, 600 de moins de 2 ans à 21 €</small></dd></div>
+          <div data-l="google"><dt>Note Google</dt><dd>4,7</dd></div>
+        </dl></div>
+        <div><h4>Compte de résultat</h4><dl>
+          <div data-l="ca"><dt>Chiffre d'affaires</dt><dd>372 k€ <small>n-1 : 360 k€</small></dd></div>
+          <div data-l="sub"><dt>Subventions d'exploitation</dt><dd>12 k€ <small>aide à l'embauche, 2e année sur 2</small></dd></div>
+          <div data-l="ms"><dt>Masse salariale hors dirigeant</dt><dd>126 k€</dd></div>
+          <div data-l="dirigeant"><dt>Dirigeant</dt><dd>42 k€ chargés <small class="l">gérant, et 20 h de cours par semaine</small></dd></div>
+          <div data-l="avantages"><dt>Avantages du dirigeant</dt><dd>4 k€ <small class="l">téléphone, véhicule</small></dd></div>
+          <div data-l="loyer"><dt>Loyer complet</dt><dd>56 k€ <small>marché du quartier : 105 €/m²</small></dd></div>
+          <div data-l="leasingcr"><dt>Loyers de leasing</dt><dd>8 k€</dd></div>
+          <div data-l="autres"><dt>Autres charges</dt><dd>58 k€</dd></div>
+          <div data-l="ebe" class="fort"><dt>EBE</dt><dd>90 k€</dd></div>
+          <div data-l="dap"><dt>Amortissements</dt><dd>22 k€</dd></div>
+          <div data-l="interets"><dt>Intérêts d'emprunt</dt><dd>1 k€</dd></div>
+          <div data-l="excep"><dt>Résultat exceptionnel</dt><dd>0</dd></div>
+          <div data-l="is"><dt>Impôt sur les sociétés</dt><dd>12 k€</dd></div>
+          <div data-l="resultat"><dt>Résultat net</dt><dd>55 k€ <small>n-1 : 48 k€</small></dd></div>
+        </dl></div>
+        <div><h4>Bilan</h4><dl>
+          <div data-l="creances"><dt>Créances adhérents</dt><dd>12 k€ <small>n-1 : 12 k€</small></dd></div>
+          <div data-l="pca"><dt>Produits constatés d'avance</dt><dd>30 k€ <small>n-1 : 30 k€</small></dd></div>
+          <div data-l="cc"><dt>Compte courant du dirigeant</dt><dd>15 k€ <small class="l">n-1 : 15 k€, dû au cédant</small></dd></div>
+          <div data-l="treso"><dt>Trésorerie</dt><dd>40 k€ <small>n-1 : 34 k€</small></dd></div>
+          <div data-l="div"><dt>Dividendes versés</dt><dd>55 k€ <small>n-1 : 50 k€</small></dd></div>
+          <div data-l="emprunt"><dt>Emprunt restant dû</dt><dd>20 k€ <small class="l">900 € par mois, fin dans 22 mois</small></dd></div>
+          <div data-l="leasing"><dt>Leasing restant dû</dt><dd>12 k€ <small class="l">670 € par mois, 18 mois</small></dd></div>
+        </dl></div>
+      </div>
+      <div class="cadre">
+        <div data-l="bail"><span>Bail</span><b>dernière année</b></div>
+        <div data-l="equipe"><span>Équipe</span><b>4 salariés + le dirigeant</b></div>
+        <div data-l="materiel"><span>Matériel</span><b>5 ans</b></div>
+        <div data-l="inv"><span>Investi cette année</span><b>6 k€</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="panneau">
+    <div class="haut passe"><div class="icone">✕</div><div><h2>Fallait pas y aller</h2><div class="match"></div></div></div>
+    <div class="page1">
+    <div class="encart"><h3>Le leurre</h3><p>Un club en croissance : +100 adhérents, CA et résultat en hausse, 55 k€ de dividendes, presque pas de dette, un dirigeant qui ne se paie que 42 k€. Sans voir les pièges : 401 k€ pour 280 k€ demandés.</p></div>
+    <div class="encart calcul"><h3>Le calcul</h3><ul>
+      <li data-ref="adherents,ca,tarif">+11 % d'adhérents pour +3 % de CA. 400 anciens à 46 €, 600 récents à 21 € : chaque ancien qui part est remplacé à moitié prix<b>−24 k€ par an</b></li>
+      <li data-ref="sub">Aide à l'embauche en 2e année sur 2 : elle s'arrête<b>−12 k€</b></li>
+      <li data-ref="dirigeant">Remplacer le dirigeant : gérant 55 k€ + coach mi-temps 20 k€ = 75 k€, pas 42 k€<b>−33 k€</b></li>
+      <li data-ref="bail,loyer">Bail en dernière année : 700 m² × 105 € = 73,5 k€ au prix du marché, contre 56 k€ aujourd'hui<b>−17 k€</b></li>
+      <li data-ref="prix,ebe,avantages,leasingcr,emprunt,leasing,cc,treso">EBE retraité 40 k€ (90 k€ − 62 k€ de pièges + 12 k€ d'avantages et leasing). 4 × 40 k€ − dette nette 7 k€<b>153 k€</b></li>
+    </ul></div>
+    </div>
+    <div class="page2">
+    <div class="encart jauge"><h3>Le prix face à la valeur</h3><div class="piste"><div class="zone"></div><div class="rail"></div><div class="mk mk-prix"><span>Prix demandé</span><b></b></div><div class="mk mk-naif"><span>Le leurre</span><b></b></div><div class="mk mk-vraie"><span>Vraie valeur</span><b></b></div></div></div>
+    <div class="fp"><div class="encart forts"><h3>Points forts</h3><ul><li>+100 adhérents, CA et résultat en hausse</li><li>Dette nette de 7 k€</li><li>Note Google 4,7, passages en hausse</li></ul></div><div class="encart faibles"><h3>Points faibles</h3><ul><li>+11 % d'adhérents pour +3 % de CA : 60 % paient 21 €</li><li>Aide de 12 k€ qui s'arrête</li><li>Dirigeant 33 k€ plus cher à remplacer</li><li>Loyer au prix du marché dans un an : +17 k€ ; valeur 57 k€ dans un an</li></ul></div></div>
+    <div class="encart tip"><h3>Synthèse</h3><p>Valeur 153 k€ aujourd'hui, 57 k€ dans un an, pour 280 k€ demandés.</p><p class="bonus">Une croissance en volume qui cache un prix qui s'effondre. Quatre petits pièges : ensemble, ils divisent la valeur par deux.</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="progression"><span class="fait"></span><span class="fait"></span><span class="ici"></span><span></span></div><div class="pied"><span>DOSSIER 3 SUR 4</span><span>J'ACHÈTE OU JE PASSE ?</span></div>
+</section>
+
+<!-- ===================== DOSSIER C ===================== -->
+<section class="ecran" style="--accent:#a6f04a" data-dossier="C" data-prix="460" data-valeur="644" data-naif="360" data-naif-label="Sans retraiter" data-indice="dap" data-num="04" data-verdict="achete" data-leurre="resultat,ms,nouveaux">
+  <div class="bande"></div>
+  <div class="vote">
+    <div class="tampon"></div>
+    <div class="club"><b>Move Factory</b> · 460 000 €</div>
+    <div class="question">Tu rachètes<br>ou tu passes ?</div>
+    <div class="choix"><div class="non"><span>✕</span>Je passe</div><div class="oui"><span>♥</span>J'achète</div></div>
+    <div class="main">À main levée. La majorité décide.</div>
+  </div>
+  <div class="scene">
+  <div class="carte">
+    <div class="etiquette-indice">Indice</div>
+    <div class="minuteur"><div class="barre"></div><div class="reste">2:30</div></div>
+    <div class="tampon"></div>
+    <div class="profil">
+      <div class="photo"><svg viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 50 L20 30 L50 10 L80 30 L80 50 Z"/><rect x="42" y="34" width="16" height="16"/></svg></div>
+      <div class="identite"><h2>Move Factory <span>6 ans</span></h2><div class="distance">À 5 minutes de chez vous</div></div>
+      <p class="bio">« Le low-cost qui cartonne, 2 000 membres. On vend pour partir au soleil. »</p>
+      <div class="tags"><span>Indépendant</span><span>1 500 m²</span><span>Low-cost, ouvert 6h-23h</span></div>
+      <div class="prix"><span>Prix demandé</span><strong>460 000 €</strong></div>
+    </div>
+    <div class="details">
+      <div class="filigrane">04</div>
+      <div class="entete-details"><h3>Move Factory</h3><div class="droite"><div class="rappel-prix" data-l="prix">Prix demandé 460 000 €</div><div class="boutons"><div class="non">✕</div><div class="oui">♥</div></div></div></div>
+      <div class="colonnes">
+        <div><h4>Activité</h4><dl>
+          <div data-l="adherents"><dt>Adhérents</dt><dd>2 000 <small>n-1 : 1 940</small></dd></div>
+          <div data-l="nouveaux"><dt>Nouveaux sur 12 mois</dt><dd>1 600</dd></div>
+          <div data-l="passages"><dt>Passages par mois</dt><dd>12 000 <small>n-1 : 11 300</small></dd></div>
+          <div data-l="tarif"><dt>Tarif moyen</dt><dd>24,90 €</dd></div>
+          <div data-l="google"><dt>Note Google</dt><dd>4,6</dd></div>
+        </dl></div>
+        <div><h4>Compte de résultat</h4><dl>
+          <div data-l="ca"><dt>Chiffre d'affaires</dt><dd>640 k€ <small>n-1 : 615 k€</small></dd></div>
+          <div data-l="sub"><dt>Subventions d'exploitation</dt><dd>0</dd></div>
+          <div data-l="ms"><dt>Masse salariale totale</dt><dd>305 k€ <small class="l">dont le dirigeant, gérant, et sa conjointe, coach : 110 k€ à eux deux</small></dd></div>
+          <div data-l="avantages"><dt>Avantages du dirigeant</dt><dd>3 k€ <small class="l">téléphone</small></dd></div>
+          <div data-l="loyer"><dt>Loyer complet</dt><dd>96 k€</dd></div>
+          <div data-l="leasingcr"><dt>Loyers de leasing</dt><dd>48 k€</dd></div>
+          <div data-l="autres"><dt>Autres charges</dt><dd>58 k€</dd></div>
+          <div data-l="ebe" class="fort"><dt>EBE</dt><dd>130 k€</dd></div>
+          <div data-l="dap"><dt>Amortissements</dt><dd>95 k€ <small class="l">matériel renouvelé il y a 2 ans</small></dd></div>
+          <div data-l="interets"><dt>Intérêts d'emprunt</dt><dd>9 k€</dd></div>
+          <div data-l="excep"><dt>Résultat exceptionnel</dt><dd>-20 k€ <small class="l">litige prud'hommes soldé</small></dd></div>
+          <div data-l="is"><dt>Impôt sur les sociétés</dt><dd>1 k€</dd></div>
+          <div data-l="resultat"><dt>Résultat net</dt><dd>5 k€ <small>n-1 : 12 k€</small></dd></div>
+        </dl></div>
+        <div><h4>Bilan</h4><dl>
+          <div data-l="creances"><dt>Créances adhérents</dt><dd>24 k€ <small>n-1 : 23 k€</small></dd></div>
+          <div data-l="pca"><dt>Produits constatés d'avance</dt><dd>22 k€ <small>n-1 : 21 k€</small></dd></div>
+          <div data-l="cc"><dt>Compte courant du dirigeant</dt><dd>0 <small>n-1 : 0</small></dd></div>
+          <div data-l="treso"><dt>Trésorerie</dt><dd>110 k€ <small>n-1 : 85 k€</small></dd></div>
+          <div data-l="div"><dt>Dividendes versés</dt><dd>0</dd></div>
+          <div data-l="emprunt"><dt>Emprunt restant dû</dt><dd>190 k€ <small class="l">6 600 € par mois, fin dans 29 mois</small></dd></div>
+          <div data-l="leasing"><dt>Leasing restant dû</dt><dd>80 k€ <small class="l">4 000 € par mois, 20 mois</small></dd></div>
+        </dl></div>
+      </div>
+      <div class="cadre">
+        <div data-l="bail"><span>Bail</span><b>8 ans restants</b></div>
+        <div data-l="equipe"><span>Équipe</span><b>8 salariés + les 2 dirigeants</b></div>
+        <div data-l="materiel"><span>Matériel</span><b>2 ans</b></div>
+        <div data-l="inv"><span>Investi cette année</span><b>5 k€</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="panneau">
+    <div class="haut achete"><div class="icone">♥</div><div><h2>Fallait y aller</h2><div class="match"></div></div></div>
+    <div class="page1">
+    <div class="encart"><h3>Le leurre</h3><p>5 k€ de résultat net, une masse salariale à 48 %, 1 540 départs par an. Et sans retraiter : 4 × 130 k€ d'EBE − 160 k€ de dette nette = 360 k€, sous les 460 k€ demandés. On passe.</p></div>
+    <div class="encart calcul"><h3>Le calcul</h3><ul>
+      <li data-ref="ms">Masse salariale hors couple : 305 k€ − 110 k€ = 195 k€<b>30 % du CA</b></li>
+      <li data-ref="nouveaux,adherents,passages,google">1 540 départs ÷ 1 970 adhérents ÷ 12 : normal en low-cost, où l'on monte jusqu'à 7 %<b>6,5 % par mois</b></li>
+      <li data-ref="resultat,dap,excep,ebe">Résultat net écrasé par 95 k€ d'amortissements sur du matériel neuf et un litige de 20 k€ soldé. Aucun des deux n'est dans l'EBE<b>EBE 130 k€</b></li>
+      <li data-ref="treso,resultat,dap,emprunt,inv">Trésorerie : 85 k€ + CAF 100 k€ (résultat net 5 k€ + amortissements 95 k€) − 70 k€ de capital d'emprunt − 5 k€ d'investissements autofinancés = 110 k€<b>+25 k€</b></li>
+      <li data-ref="ms,avantages,leasingcr">Couple 110 k€ → gérant 55 k€ + coach 35 k€ : +20 k€. Avantages +3 k€. Leasing +48 k€<b>EBE retraité 201 k€</b></li>
+      <li data-ref="prix,emprunt,leasing,treso">4 × 201 k€ − dette nette 160 k€ (emprunt 190 k€ + leasing 80 k€ − trésorerie 110 k€)<b>644 k€</b></li>
+    </ul></div>
+    </div>
+    <div class="page2">
+    <div class="encart jauge"><h3>Le prix face à la valeur</h3><div class="piste"><div class="zone"></div><div class="rail"></div><div class="mk mk-prix"><span>Prix demandé</span><b></b></div><div class="mk mk-naif"><span>Le leurre</span><b></b></div><div class="mk mk-vraie"><span>Vraie valeur</span><b></b></div></div></div>
+    <div class="fp"><div class="encart forts"><h3>Points forts</h3><ul><li>2 000 adhérents, 6 passages par mois, note 4,6</li><li>Matériel de 2 ans : rien à investir</li><li>Couple remplaçable (+20 k€), avantages (+3 k€), leasing (+48 k€) : 71 k€ à réintégrer</li><li>110 k€ de trésorerie</li></ul></div><div class="encart faibles"><h3>Points faibles</h3><ul><li>Dette nette de 160 k€</li><li>1 540 départs par an à remplacer</li></ul></div></div>
+    <div class="encart tip"><h3>Synthèse</h3><p>Valeur 644 k€ pour 460 k€ demandés.</p><p class="bonus">Un résultat net écrasé par les amortissements et un litige ne dit rien de la rentabilité. Le meilleur des quatre.</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="progression"><span class="fait"></span><span class="fait"></span><span class="fait"></span><span class="ici"></span></div><div class="pied"><span>DOSSIER 4 SUR 4</span><span>J'ACHÈTE OU JE PASSE ?</span></div>
+</section>
+
+<section class="ecran bilan-final">
+  <div class="bande"></div>
+  <h2>Alors, fallait-il y aller ?</h2>
+  <div class="ligne achete" style="--accent:#ffe600"><div class="icone">♥</div><div class="nom">Iron Park<small>Fallait y aller</small></div><div class="pourquoi">Résultat plombé par une mise au rebut, trésorerie vidée par des remboursements, dirigeant payé 45 k€ de trop plus 15 k€ d'avantages à réintégrer, et un emprunt qui s'éteint.</div><div class="chiffres">vaut <b>554 k€</b>demandé 420 k€</div></div>
+  <div class="ligne passe" style="--accent:#ff8a3d"><div class="icone">✕</div><div class="nom">Le Loft<small>Fallait pas y aller</small></div><div class="pourquoi">Trois pièges cumulés : PCA pris d'avance, impayés non provisionnés, aide qui s'arrête.</div><div class="chiffres">vaut <b>286 k€</b>demandé 520 k€</div></div>
+  <div class="ligne passe" style="--accent:#5ad8e6"><div class="icone">✕</div><div class="nom">Kinetik<small>Fallait pas y aller</small></div><div class="pourquoi">Une croissance en volume qui cache un prix qui s'effondre, une aide qui s'arrête, un dirigeant sous-payé, un loyer qui va monter.</div><div class="chiffres">vaut <b>153 k€</b>demandé 280 k€</div></div>
+  <div class="ligne achete" style="--accent:#a6f04a"><div class="icone">♥</div><div class="nom">Move Factory<small>Fallait y aller</small></div><div class="pourquoi">Résultat écrasé par les amortissements et un litige soldé ; les alarmes s'expliquent ; 48 k€ de leasing.</div><div class="chiffres">vaut <b>644 k€</b>demandé 460 k€</div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA</span><span>SYNTHÈSE</span></div>
+</section>
+
+<section class="ecran texte">
+  <div class="bande"></div>
+  <h2>Ce qu'il faut retenir</h2>
+  <ol>
+    <li><strong>Le prix, c'est 4 fois l'EBE retraité, moins la dette nette.</strong> Pas 4 fois le résultat. Les emprunts, le leasing et la trésorerie font partie du prix.</li>
+    <li><strong>Retraiter l'EBE, c'est dans les deux sens.</strong> On réintègre ce que le repreneur ne paiera plus : salaire du dirigeant au-delà d'un gérant, avantages personnels, leasing. On retire ce qu'il paiera en plus, et ce qui ne se reproduira pas : un dirigeant sous-payé à remplacer, des PCA pris d'avance.</li>
+    <li><strong>Un adhérent vaut ce qu'il paie et ce qu'il fait.</strong> Le tarif des nouveaux, pas la moyenne. Les passages, pas le nombre d'inscrits. Le churn normal du modèle, pas celui du voisin.</li>
+  </ol>
+  <p class="note">Dans votre club, dès maintenant : votre EBE retraité, ligne par ligne. Votre dette nette. Vos adhérents par tarif et par ancienneté. Un chantier, une date.</p>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA</span><span>CONCLUSION</span></div>
+</section>
+
+<section class="ecran annexe sommaire-annexes">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexes</span><h2>Les notions, en images</h2><p>Cliquez sur une notion. Touche X pour revenir au quiz.</p></div>
+  <div class="tuiles"><div class="tuile" data-go="1"><b>01</b><span>EBE</span></div><div class="tuile" data-go="2"><b>02</b><span>EBE retraité</span></div><div class="tuile" data-go="3"><b>03</b><span>Valeur et dette nette</span></div><div class="tuile" data-go="4"><b>04</b><span>CAF et trésorerie</span></div><div class="tuile" data-go="5"><b>05</b><span>PCA</span></div><div class="tuile" data-go="6"><b>06</b><span>Churn</span></div><div class="tuile" data-go="7"><b>07</b><span>Valeur d'un adhérent</span></div><div class="tuile" data-go="8"><b>08</b><span>Mix tarifaire</span></div><div class="tuile" data-go="9"><b>09</b><span>Point mort</span></div><div class="tuile" data-go="10"><b>10</b><span>Pourquoi 4 ×</span></div><div class="tuile" data-go="11"><b>11</b><span>Titres ou fonds</span></div><div class="tuile" data-go="12"><b>12</b><span>Le bilan qui trompe</span></div><div class="tuile" data-go="13"><b>13</b><span>Les repères</span></div><div class="tuile" data-go="14"><b>14</b><span>Les quatre cas</span></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>Maxence Corlouër · Previbiz</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · EBE</span><h2>Du chiffre d'affaires à l'EBE, puis au résultat net</h2><p>Exemple : Iron Park</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 684" width="1120" height="684" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><line x1="10" x2="1110" y1="530.0" y2="530.0" stroke="#444" stroke-width="2"/><rect x="20.0" y="40.0" width="77.2" height="490.0" rx="6" fill="#ffe600" opacity="1"/><text x="58.6" y="28.0" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">520 k€</text><text x="58.6" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">CA</text><line x1="97.16666666666667" x2="111.16666666666667" y1="40.0" y2="40.0" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="111.2" y="40.0" width="77.2" height="155.5" rx="6" fill="#ff4b4b" opacity=".9"/><text x="149.8" y="28.0" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−165 k€</text><text x="149.8" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Masse</text><text x="149.8" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">salariale</text><line x1="188.33333333333334" x2="202.33333333333334" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="202.3" y="195.5" width="77.2" height="94.2" rx="6" fill="#ff4b4b" opacity=".9"/><text x="240.9" y="183.5" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−100 k€</text><text x="240.9" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Dirigeant</text><line x1="279.5" x2="293.5" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="293.5" y="289.7" width="77.2" height="14.1" rx="6" fill="#ff4b4b" opacity=".9"/><text x="332.1" y="277.7" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−15 k€</text><text x="332.1" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Avantages</text><line x1="370.6666666666667" x2="384.6666666666667" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="384.7" y="303.8" width="77.2" height="67.8" rx="6" fill="#ff4b4b" opacity=".9"/><text x="423.2" y="291.8" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−72 k€</text><text x="423.2" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Loyer</text><line x1="461.83333333333337" x2="475.83333333333337" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="475.8" y="371.7" width="77.2" height="73.5" rx="6" fill="#ff4b4b" opacity=".9"/><text x="514.4" y="359.7" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−78 k€</text><text x="514.4" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Autres</text><text x="514.4" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">charges</text><line x1="553.0" x2="567.0" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="567.0" y="445.2" width="77.2" height="84.8" rx="6" fill="#ffe600" opacity="1"/><text x="605.6" y="433.2" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">90 k€</text><text x="605.6" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">EBE</text><line x1="644.1666666666666" x2="658.1666666666667" y1="445.1923076923077" y2="445.1923076923077" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="658.2" y="445.2" width="77.2" height="30.2" rx="6" fill="#ff4b4b" opacity=".9"/><text x="696.8" y="433.2" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−32 k€</text><text x="696.8" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Amortis-</text><text x="696.8" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">sements</text><line x1="735.3333333333334" x2="749.3333333333334" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="749.3" y="475.3" width="77.2" height="3.0" rx="6" fill="#ff4b4b" opacity=".9"/><text x="787.9" y="463.3" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−3 k€</text><text x="787.9" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Intérêts</text><line x1="826.5" x2="840.5" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="840.5" y="478.2" width="77.2" height="33.0" rx="6" fill="#ff4b4b" opacity=".9"/><text x="879.1" y="466.2" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−35 k€</text><text x="879.1" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Exception-</text><text x="879.1" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">nel</text><line x1="917.6666666666666" x2="931.6666666666667" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="931.7" y="511.2" width="77.2" height="3.0" rx="6" fill="#ff4b4b" opacity=".9"/><text x="970.3" y="499.2" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−3 k€</text><text x="970.3" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Impôt</text><line x1="1008.8333333333334" x2="1022.8333333333334" y1="513.9807692307693" y2="513.9807692307693" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="1022.8" y="514.0" width="77.2" height="16.0" rx="6" fill="#ffe600" opacity="1"/><text x="1061.4" y="502.0" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">17 k€</text><text x="1061.4" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">Résultat</text><text x="1061.4" y="588.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">net</text><path d="M20.0 642 L20.0 652 L644.1666666666666 652 L644.1666666666666 642" stroke="#777" stroke-width="2" fill="none"/><text x="332.0833333333333" y="678" text-anchor="middle" font-size="20" fill="#a8a8a8">L'activité du club</text><path d="M658.1666666666667 642 L658.1666666666667 652 L1100.0 652 L1100.0 642" stroke="#777" stroke-width="2" fill="none"/><text x="879.0833333333334" y="678" text-anchor="middle" font-size="20" fill="#a8a8a8">Tout ce qui n'est pas l'activité</text></svg></div><div class="annexe-d"><div class="abox "><h3>L'EBE, c'est quoi ?</h3><p>Ce que le club gagne <b>avec son activité</b> : les abonnements encaissés, moins ce qu'il faut payer pour faire tourner la salle (équipe, dirigeant, loyer, charges).</p></div><div class="abox "><h3>Ce qu'il ne compte pas</h3><p>L'usure du matériel (amortissements), la façon dont le club est financé (intérêts), les événements ponctuels (exceptionnel) et l'impôt.</p></div><div class="abox j"><h3>Pourquoi on valorise sur l'EBE</h3><p>Parce que c'est ce que le repreneur récupère, quel que soit son financement. Le résultat net dépend des choix du cédant.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · EBE retraité</span><h2>L'EBE retraité : l'EBE du repreneur</h2><p>Exemple : Iron Park</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 640" width="1120" height="640" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><line x1="10" x2="1110" y1="530.0" y2="530.0" stroke="#444" stroke-width="2"/><rect x="20.0" y="270.6" width="259.5" height="259.4" rx="6" fill="#ffe600" opacity="1"/><text x="149.8" y="258.6" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">90 k€</text><text x="149.8" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">EBE</text><text x="149.8" y="588.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">affiché</text><line x1="279.5" x2="293.5" y1="270.5882352941176" y2="270.5882352941176" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="293.5" y="140.9" width="259.5" height="129.7" rx="6" fill="#3ddc84" opacity=".9"/><text x="423.2" y="128.9" text-anchor="middle" font-size="24" font-weight="800" fill="#3ddc84">+45 k€</text><text x="423.2" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Dirigeant</text><text x="423.2" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">payé 100 k€</text><text x="423.2" y="612.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">pour 55 k€</text><line x1="553.0" x2="567.0" y1="97.64705882352939" y2="97.64705882352939" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="567.0" y="97.6" width="259.5" height="43.2" rx="6" fill="#3ddc84" opacity=".9"/><text x="696.8" y="85.6" text-anchor="middle" font-size="24" font-weight="800" fill="#3ddc84">+15 k€</text><text x="696.8" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Avantages</text><text x="696.8" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">personnels</text><line x1="826.5" x2="840.5" y1="97.64705882352939" y2="97.64705882352939" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="840.5" y="97.6" width="259.5" height="432.4" rx="6" fill="#ffe600" opacity="1"/><text x="970.2" y="85.6" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">150 k€</text><text x="970.2" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">EBE</text><text x="970.2" y="588.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">retraité</text></svg></div><div class="annexe-d"><div class="abox v"><h3>On réintègre (+)</h3><ul><li>Salaire du dirigeant au-delà d'un gérant (55 k€)</li><li>Avantages personnels : véhicule, frais</li><li>Loyers de leasing (le reste dû passe en dette)</li></ul></div><div class="abox r"><h3>On retire (−)</h3><ul><li>Un dirigeant sous-payé à remplacer</li><li>Une aide qui s'arrête</li><li>Des PCA ou des impayés qui gonflent le CA</li><li>Un loyer qui va augmenter</li></ul></div><div class="abox j"><h3>L'idée</h3><p>L'EBE que <b>le repreneur</b> fera, pas celui du cédant.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Valeur</span><h2>De l'EBE retraité à la valeur du club</h2><p>Exemple : Iron Park, prix demandé 420 k€</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 640" width="1120" height="640" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><line x1="10" x2="1110" y1="530.0" y2="530.0" stroke="#444" stroke-width="2"/><rect x="20.0" y="70.6" width="259.5" height="459.4" rx="6" fill="#ffe600" opacity="1"/><text x="149.8" y="58.6" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">600 k€</text><text x="149.8" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">4 × EBE</text><text x="149.8" y="588.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">retraité</text><line x1="279.5" x2="293.5" y1="70.625" y2="70.625" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="293.5" y="70.6" width="259.5" height="44.4" rx="6" fill="#ff4b4b" opacity=".9"/><text x="423.2" y="58.6" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−58 k€</text><text x="423.2" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Emprunt</text><text x="423.2" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">restant dû</text><line x1="553.0" x2="567.0" y1="105.84375" y2="105.84375" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="567.0" y="105.8" width="259.5" height="9.2" rx="6" fill="#3ddc84" opacity=".9"/><text x="696.8" y="93.8" text-anchor="middle" font-size="24" font-weight="800" fill="#3ddc84">+12 k€</text><text x="696.8" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Trésorerie</text><line x1="826.5" x2="840.5" y1="105.84375" y2="105.84375" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="840.5" y="105.8" width="259.5" height="424.2" rx="6" fill="#ffe600" opacity="1"/><text x="970.2" y="93.8" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">554 k€</text><text x="970.2" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">Valeur</text><text x="970.2" y="588.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">des titres</text></svg></div><div class="annexe-d"><div class="abox "><h3>La formule du jeu</h3><p class='formule-a'>Valeur = 4 × EBE retraité − dette nette</p></div><div class="abox "><h3>La dette nette</h3><p>Emprunts + leasing restant dû + compte courant dû au cédant − trésorerie.</p><p>Le repreneur achète les titres : il récupère les dettes <b>et</b> la trésorerie.</p></div><div class="abox j"><h3>Le multiple payé</h3><p>(Prix + dette nette) ÷ EBE retraité. Sous 4 : bonne affaire. Au-dessus : trop cher.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · CAF</span><h2>Résultat, CAF, trésorerie : trois choses différentes</h2><p>Exemple : Iron Park</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 640" width="1120" height="640" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><line x1="10" x2="1110" y1="455.2542372881356" y2="455.2542372881356" stroke="#444" stroke-width="2"/><rect x="20.0" y="384.7" width="142.3" height="70.6" rx="6" fill="#ffe600" opacity="1"/><text x="91.1" y="372.7" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">17 k€</text><text x="91.1" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">Résultat</text><text x="91.1" y="588.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">net</text><line x1="162.28571428571428" x2="176.28571428571428" y1="384.66101694915255" y2="384.66101694915255" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="176.3" y="251.8" width="142.3" height="132.9" rx="6" fill="#3ddc84" opacity=".9"/><text x="247.4" y="239.8" text-anchor="middle" font-size="24" font-weight="800" fill="#3ddc84">+32 k€</text><text x="247.4" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Amortis-</text><text x="247.4" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">sements</text><line x1="318.57142857142856" x2="332.57142857142856" y1="530.0" y2="530.0" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="332.6" y="106.4" width="142.3" height="145.3" rx="6" fill="#3ddc84" opacity=".9"/><text x="403.7" y="94.4" text-anchor="middle" font-size="24" font-weight="800" fill="#3ddc84">+35 k€</text><text x="403.7" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Mise</text><text x="403.7" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">au rebut</text><line x1="474.85714285714283" x2="488.85714285714283" y1="530.0" y2="530.0" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="488.9" y="106.4" width="142.3" height="348.8" rx="6" fill="#ffe600" opacity="1"/><text x="560.0" y="94.4" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">84 k€</text><text x="560.0" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">CAF</text><line x1="631.1428571428571" x2="645.1428571428571" y1="106.4406779661017" y2="106.4406779661017" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="645.1" y="106.4" width="142.3" height="236.7" rx="6" fill="#ff4b4b" opacity=".9"/><text x="716.3" y="94.4" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−57 k€</text><text x="716.3" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Capital</text><text x="716.3" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">d'emprunt</text><line x1="787.4285714285713" x2="801.4285714285713" y1="530.0" y2="530.0" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="801.4" y="343.1" width="142.3" height="186.9" rx="6" fill="#ff4b4b" opacity=".9"/><text x="872.6" y="331.1" text-anchor="middle" font-size="24" font-weight="800" fill="#ff4b4b">−45 k€</text><text x="872.6" y="564.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">Compte</text><text x="872.6" y="588.0" text-anchor="middle" font-size="20" font-weight="500" fill="#ddd">courant</text><line x1="943.7142857142856" x2="957.7142857142857" y1="530.0" y2="530.0" stroke="#666" stroke-dasharray="5 5" stroke-width="2"/><rect x="957.7" y="455.3" width="142.3" height="74.7" rx="6" fill="#ffe600" opacity="1"/><text x="1028.9" y="443.3" text-anchor="middle" font-size="24" font-weight="800" fill="#ffe600">-18 k€</text><text x="1028.9" y="564.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">Trésorerie</text><text x="1028.9" y="588.0" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">de l'année</text></svg></div><div class="annexe-d"><div class="abox "><h3>La CAF</h3><p>Le cash réellement généré : le résultat net, plus les charges qui ne font pas sortir d'argent (amortissements, mise au rebut).</p></div><div class="abox r"><h3>Ce qui sort sans être une charge</h3><p>Le remboursement du <b>capital</b> d'un emprunt ou d'un compte courant ne passe pas par le résultat, mais vide la trésorerie.</p></div><div class="abox j"><h3>À retenir</h3><p>Un club peut gagner de l'argent et ne pas en avoir. Il faut lire la trésorerie avec l'échéancier des dettes.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · PCA</span><h2>Les produits constatés d'avance (PCA) sur trois exercices</h2><p>Un abonnement annuel qui chevauche deux années</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 650" width="1120" height="650" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><text x="216" y="40" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Exercice N</text><text x="73.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="61" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="99.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">F</text><rect x="87" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="125.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">M</text><rect x="113" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="151.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">A</text><rect x="139" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="177.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">M</text><rect x="165" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="203.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="191" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="229.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="217" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="255.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">A</text><rect x="243" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="281.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">S</text><rect x="269" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="307.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">O</text><rect x="295" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="333.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">N</text><rect x="321" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="359.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">D</text><rect x="347" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="564" y="40" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Exercice N+1</text><text x="421.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="409" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="447.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">F</text><rect x="435" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="473.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">M</text><rect x="461" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="499.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">A</text><rect x="487" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="525.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">M</text><rect x="513" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="551.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="539" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="577.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="565" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="603.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">A</text><rect x="591" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="629.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">S</text><rect x="617" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="655.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">O</text><rect x="643" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="681.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">N</text><rect x="669" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="707.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">D</text><rect x="695" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="912" y="40" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Exercice N+2</text><text x="769.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="757" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="795.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">F</text><rect x="783" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="821.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">M</text><rect x="809" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="847.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">A</text><rect x="835" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="873.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">M</text><rect x="861" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="899.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="887" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="925.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">J</text><rect x="913" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="951.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">A</text><rect x="939" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="977.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">S</text><rect x="965" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="1003.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">O</text><rect x="991" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="1029.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">N</text><rect x="1017" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="1055.0" y="72" text-anchor="middle" font-size="15" fill="#a8a8a8">D</text><rect x="1043" y="84" width="24" height="30" fill="#262626" rx="3"/><text x="60" y="160" font-size="20" fill="#ddd">Abonnement annuel de 1 200 € payé le 1er septembre N</text><rect x="269" y="175" width="102" height="44" rx="6" fill="#ffe600"/><rect x="409" y="175" width="206" height="44" rx="6" fill="#ff8a3d"/><text x="320" y="204" text-anchor="middle" font-size="18" font-weight="800" fill="#000">400 €</text><text x="512" y="204" text-anchor="middle" font-size="18" font-weight="800" fill="#000">800 €</text><text x="60" y="262" font-size="20" fill="#ddd">Renouvelé le 1er septembre N+1</text><rect x="617" y="277" width="102" height="44" rx="6" fill="#ffe600"/><rect x="757" y="277" width="206" height="44" rx="6" fill="#ff8a3d"/><text x="668" y="306" text-anchor="middle" font-size="18" font-weight="800" fill="#000">400 €</text><text x="860" y="306" text-anchor="middle" font-size="18" font-weight="800" fill="#000">800 €</text><text x="60" y="352" font-size="20" fill="#ddd">Renouvelé le 1er septembre N+2</text><rect x="965" y="362" width="102" height="44" rx="6" fill="#ffe600"/><text x="1016" y="391" text-anchor="middle" font-size="18" font-weight="800" fill="#000">400 €</text><text x="60" y="440" font-size="22" font-weight="700" fill="#fff">Chiffre d'affaires de l'exercice</text><text x="216" y="476" text-anchor="middle" font-size="30" font-weight="900" fill="#fff">400 €</text><text x="564" y="476" text-anchor="middle" font-size="30" font-weight="900" fill="#fff">1 200 €</text><text x="912" y="476" text-anchor="middle" font-size="30" font-weight="900" fill="#fff">1 200 €</text><text x="60" y="500" font-size="22" font-weight="700" fill="#ffe600">PCA au bilan au 31 décembre</text><text x="216" y="536" text-anchor="middle" font-size="30" font-weight="900" fill="#ffe600">800 €</text><text x="564" y="536" text-anchor="middle" font-size="30" font-weight="900" fill="#ffe600">800 €</text><text x="912" y="536" text-anchor="middle" font-size="30" font-weight="900" fill="#ffe600">800 €</text><rect x="60" y="560" width="1000" height="76" rx="12" fill="#2a1414" stroke="#ff4b4b" stroke-width="2"/><text x="84" y="590" font-size="22" font-weight="800" fill="#ff4b4b">Le piège : compter les 1 200 € dès l'exercice N</text><text x="84" y="622" font-size="20" fill="#ddd">CA de N gonflé de 800 €, PCA à zéro… et l'année suivante démarre avec 800 € de CA en moins.</text></svg></div><div class="annexe-d"><div class="abox "><h3>Les PCA, c'est quoi ?</h3><p>Des abonnements <b>encaissés</b> pour une période pas encore passée. C'est un service que le club doit encore rendre.</p></div><div class="abox r"><h3>Le bon réflexe</h3><p>À adhérents stables, les PCA doivent être stables. Des PCA qui baissent = du CA de l'an prochain déjà consommé.</p></div><div class="abox j"><h3>Dans le quiz</h3><p>Le Loft : PCA 95 k€ → 65 k€ avec 5 adhérents de moins. 30 k€ de CA « empruntés » à l'an prochain.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Churn</span><h2>Le churn : la baignoire qui se remplit et se vide</h2><p>Exemple : Iron Park</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 640" width="1120" height="640" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><path d="M260 150 L260 470 Q260 520 310 520 L690 520 Q740 520 740 470 L740 150" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round"/><rect x="266" y="250" width="468" height="264" rx="30" fill="#ffe600" opacity=".85"/><text x="500" y="370" text-anchor="middle" font-size="64" font-weight="900" fill="#000">950</text><text x="500" y="410" text-anchor="middle" font-size="22" font-weight="700" fill="#000">adhérents aujourd'hui</text><text x="500" y="455" text-anchor="middle" font-size="20" fill="#000">il y a un an : 930</text><path d="M120 80 L330 80 L330 130" stroke="#3ddc84" stroke-width="16" fill="none" stroke-linecap="round"/><path d="M330 150 L330 235" stroke="#3ddc84" stroke-width="10" stroke-dasharray="4 10" stroke-linecap="round"/><text x="120" y="60" font-size="26" font-weight="900" fill="#3ddc84">+ 440 nouveaux sur 12 mois</text><path d="M660 520 L660 590 L900 590" stroke="#ff4b4b" stroke-width="16" fill="none" stroke-linecap="round"/><text x="790" y="630" text-anchor="middle" font-size="26" font-weight="900" fill="#ff4b4b">− 420 départs</text><text x="930" y="300" font-size="22" fill="#ddd">930 + 440 − 420</text><text x="930" y="340" font-size="30" font-weight="900" fill="#ffe600">= 950</text></svg></div><div class="annexe-d"><div class="abox "><h3>Le churn mensuel</h3><p class='formule-a'>départs ÷ adhérents moyens ÷ 12</p><p>Iron Park : 420 ÷ 940 ÷ 12 = <b>3,7 %</b> par mois.</p></div><div class="abox "><h3>Les repères</h3><svg viewBox="0 0 520 150" width="520" height="150" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><defs><linearGradient id="gc"><stop offset="0" stop-color="#3ddc84"/><stop offset=".55" stop-color="#ffe600"/><stop offset="1" stop-color="#ff4b4b"/></linearGradient></defs><rect x="20" y="60" width="480" height="16" rx="8" fill="url(#gc)"/><line x1="140.0" x2="140.0" y1="50" y2="86" stroke="#fff" stroke-width="4"/><text x="140.0" y="22" text-anchor="middle" font-size="17" fill="#a8a8a8">Club familial</text><text x="140.0" y="44" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">3,5 %</text><line x1="220.0" x2="220.0" y1="50" y2="86" stroke="#fff" stroke-width="4"/><text x="220.0" y="110" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">4,5 %</text><text x="220.0" y="134" text-anchor="middle" font-size="17" fill="#a8a8a8">Moyenne</text><line x1="420.0" x2="420.0" y1="50" y2="86" stroke="#fff" stroke-width="4"/><text x="420.0" y="22" text-anchor="middle" font-size="17" fill="#a8a8a8">Low-cost</text><text x="420.0" y="44" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">7 %</text></svg></div><div class="abox j"><h3>Ce que ça veut dire</h3><p>À 4,5 % par mois, le club doit remplacer plus de la moitié de sa base chaque année. Le churn se lit avec le modèle : 6,5 % est normal en low-cost, inquiétant en premium.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Valeur d'un adhérent</span><h2>Combien vaut un adhérent ?</h2><p>Le chiffre d'affaires qu'il rapporte pendant toute sa durée d'abonnement</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 600" width="1120" height="600" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><text x="20" y="76" font-size="26" font-weight="800" fill="#ffe600">Iron Park</text><text x="20" y="104" font-size="19" fill="#a8a8a8">42 € · churn 3,7 %</text><rect x="300" y="56" width="279" height="52" rx="8" fill="#ffe600"/><text x="593" y="90" font-size="28" font-weight="900" fill="#fff">1 140 €</text><text x="593" y="114" font-size="17" fill="#a8a8a8">27 mois en moyenne</text><text x="20" y="206" font-size="26" font-weight="800" fill="#ff8a3d">Le Loft</text><text x="20" y="234" font-size="19" fill="#a8a8a8">110 € · churn 4,5 %</text><rect x="300" y="186" width="602" height="52" rx="8" fill="#ff8a3d"/><text x="916" y="220" font-size="28" font-weight="900" fill="#fff">2 440 €</text><text x="916" y="244" font-size="17" fill="#a8a8a8">22 mois en moyenne</text><text x="20" y="336" font-size="26" font-weight="800" fill="#5ad8e6">Kinetik, nouveaux</text><text x="20" y="364" font-size="19" fill="#a8a8a8">21 € · churn 4,5 %</text><rect x="300" y="316" width="115" height="52" rx="8" fill="#5ad8e6"/><text x="429" y="350" font-size="28" font-weight="900" fill="#fff">470 €</text><text x="429" y="374" font-size="17" fill="#a8a8a8">22 mois en moyenne</text><text x="20" y="466" font-size="26" font-weight="800" fill="#a6f04a">Move Factory</text><text x="20" y="494" font-size="19" fill="#a8a8a8">24,90 € · churn 6,5 %</text><rect x="300" y="446" width="94" height="52" rx="8" fill="#a6f04a"/><text x="408" y="480" font-size="28" font-weight="900" fill="#fff">380 €</text><text x="408" y="504" font-size="17" fill="#a8a8a8">15 mois en moyenne</text></svg></div><div class="annexe-d"><div class="abox "><h3>La formule</h3><p class='formule-a'>tarif mensuel × durée de vie moyenne</p><p>Durée de vie moyenne = 1 ÷ churn mensuel. À 3,7 % par mois, un adhérent reste en moyenne 27 mois.</p></div><div class="abox v"><h3>Ce que ça change</h3><p>Iron Park : passer de 3,7 % à 2,7 % de churn fait passer un adhérent de 1 140 € à 1 560 €. La fidélisation vaut de l'argent.</p></div><div class="abox j"><h3>Attention</h3><p>C'est du chiffre d'affaires, pas de la marge. Et un adhérent recruté en promotion à 21 € ne vaut pas un ancien à 46 €.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Mix tarifaire</span><h2>Le mix tarifaire qui glisse</h2><p>Illustration : un club qui recrute en promotion permanente</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 600" width="1120" height="600" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><rect x="90" y="235.99999999999997" width="150" height="204.00000000000003" fill="#ffe600" rx="4"/><rect x="90" y="133.99999999999994" width="150" height="102.00000000000001" fill="#5ad8e6" rx="4"/><text x="165.0" y="346.0" text-anchor="middle" font-size="22" font-weight="800" fill="#000">600</text><text x="165.0" y="192.99999999999997" text-anchor="middle" font-size="22" font-weight="800" fill="#000">300</text><text x="165.0" y="474" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">Année 1</text><text x="165.0" y="504" text-anchor="middle" font-size="20" fill="#a8a8a8">900 adhérents</text><text x="165.0" y="536" text-anchor="middle" font-size="22" font-weight="800" fill="#ff4b4b">38 € de moyenne</text><text x="165.0" y="566" text-anchor="middle" font-size="20" fill="#ddd">CA 407 k€</text><rect x="350" y="276.79999999999995" width="150" height="163.20000000000002" fill="#ffe600" rx="4"/><rect x="350" y="99.99999999999994" width="150" height="176.8" fill="#5ad8e6" rx="4"/><text x="425.0" y="366.4" text-anchor="middle" font-size="22" font-weight="800" fill="#000">480</text><text x="425.0" y="196.39999999999995" text-anchor="middle" font-size="22" font-weight="800" fill="#000">520</text><text x="425.0" y="474" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">Année 2</text><text x="425.0" y="504" text-anchor="middle" font-size="20" fill="#a8a8a8">1000 adhérents</text><text x="425.0" y="536" text-anchor="middle" font-size="22" font-weight="800" fill="#ff4b4b">33 € de moyenne</text><text x="425.0" y="566" text-anchor="middle" font-size="20" fill="#ddd">CA 396 k€</text><rect x="610" y="304.0" width="150" height="136.0" fill="#ffe600" rx="4"/><rect x="610" y="99.99999999999997" width="150" height="204.00000000000003" fill="#5ad8e6" rx="4"/><text x="685.0" y="380.0" text-anchor="middle" font-size="22" font-weight="800" fill="#000">400</text><text x="685.0" y="210.0" text-anchor="middle" font-size="22" font-weight="800" fill="#000">600</text><text x="685.0" y="474" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">Année 3</text><text x="685.0" y="504" text-anchor="middle" font-size="20" fill="#a8a8a8">1000 adhérents</text><text x="685.0" y="536" text-anchor="middle" font-size="22" font-weight="800" fill="#ff4b4b">31 € de moyenne</text><text x="685.0" y="566" text-anchor="middle" font-size="20" fill="#ddd">CA 372 k€</text><rect x="870" y="331.2" width="150" height="108.80000000000001" fill="#ffe600" rx="4"/><rect x="870" y="99.99999999999997" width="150" height="231.20000000000002" fill="#5ad8e6" rx="4"/><text x="945.0" y="393.6" text-anchor="middle" font-size="22" font-weight="800" fill="#000">320</text><text x="945.0" y="223.59999999999997" text-anchor="middle" font-size="22" font-weight="800" fill="#000">680</text><text x="945.0" y="474" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">Année 4</text><text x="945.0" y="504" text-anchor="middle" font-size="20" fill="#a8a8a8">1000 adhérents</text><text x="945.0" y="536" text-anchor="middle" font-size="22" font-weight="800" fill="#ff4b4b">29 € de moyenne</text><text x="945.0" y="566" text-anchor="middle" font-size="20" fill="#ddd">CA 348 k€</text><rect x="90" y="14" width="22" height="22" fill="#ffe600"/><text x="122" y="33" font-size="20" fill="#ddd">Anciens à 46 €</text><rect x="320" y="14" width="22" height="22" fill="#5ad8e6"/><text x="352" y="33" font-size="20" fill="#ddd">Nouveaux à 21 € (promotion permanente)</text></svg></div><div class="annexe-d"><div class="abox "><h3>Le mécanisme</h3><p>Chaque année, des anciens à 46 € partent. Ils sont remplacés par des nouveaux recrutés en promotion à 21 €. Le club a l'air de grandir, mais chaque adhérent rapporte moins.</p></div><div class="abox r"><h3>Le signal</h3><p>Des adhérents qui montent plus vite que le CA. Kinetik : +11 % d'adhérents pour +3 % de CA.</p></div><div class="abox j"><h3>Le réflexe</h3><p>Demander la répartition des adhérents par tarif et par ancienneté, et calculer le CA par adhérent chaque année.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Point mort</span><h2>Le point mort : combien d'adhérents pour payer les charges ?</h2><p>Exemple : Iron Park, 520 k€ de CA pour 950 adhérents</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 600" width="1120" height="600" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><line x1="90" x2="1080" y1="520.0" y2="520.0" stroke="#222"/><text x="78" y="526.0" text-anchor="end" font-size="16" fill="#a8a8a8">0 k€</text><line x1="90" x2="1080" y1="451.42857142857144" y2="451.42857142857144" stroke="#222"/><text x="78" y="457.42857142857144" text-anchor="end" font-size="16" fill="#a8a8a8">100 k€</text><line x1="90" x2="1080" y1="382.8571428571429" y2="382.8571428571429" stroke="#222"/><text x="78" y="388.8571428571429" text-anchor="end" font-size="16" fill="#a8a8a8">200 k€</text><line x1="90" x2="1080" y1="314.2857142857143" y2="314.2857142857143" stroke="#222"/><text x="78" y="320.2857142857143" text-anchor="end" font-size="16" fill="#a8a8a8">300 k€</text><line x1="90" x2="1080" y1="245.71428571428572" y2="245.71428571428572" stroke="#222"/><text x="78" y="251.71428571428572" text-anchor="end" font-size="16" fill="#a8a8a8">400 k€</text><line x1="90" x2="1080" y1="177.14285714285717" y2="177.14285714285717" stroke="#222"/><text x="78" y="183.14285714285717" text-anchor="end" font-size="16" fill="#a8a8a8">500 k€</text><line x1="90" x2="1080" y1="108.57142857142856" y2="108.57142857142856" stroke="#222"/><text x="78" y="114.57142857142856" text-anchor="end" font-size="16" fill="#a8a8a8">600 k€</text><line x1="90" x2="1080" y1="40.0" y2="40.0" stroke="#222"/><text x="78" y="46.0" text-anchor="end" font-size="16" fill="#a8a8a8">700 k€</text><text x="90.0" y="548" text-anchor="middle" font-size="16" fill="#a8a8a8">0</text><text x="255.0" y="548" text-anchor="middle" font-size="16" fill="#a8a8a8">200</text><text x="420.0" y="548" text-anchor="middle" font-size="16" fill="#a8a8a8">400</text><text x="585.0" y="548" text-anchor="middle" font-size="16" fill="#a8a8a8">600</text><text x="750.0" y="548" text-anchor="middle" font-size="16" fill="#a8a8a8">800</text><text x="915.0" y="548" text-anchor="middle" font-size="16" fill="#a8a8a8">1000</text><text x="1080.0" y="548" text-anchor="middle" font-size="16" fill="#a8a8a8">1200</text><text x="585.0" y="578" text-anchor="middle" font-size="18" fill="#ddd">Nombre d&apos;adhérents</text><polygon points="715.4927884615385,235.42857142857144 1080.0,69.59398496240601 1080.0,235.42857142857144" fill="#3ddc84" opacity=".18"/><polygon points="90.0,520.0 715.4927884615385,235.42857142857144 90.0,235.42857142857144" fill="#ff4b4b" opacity=".15"/><line x1="90.0" x2="1080.0" y1="235.42857142857144" y2="235.42857142857144" stroke="#ff4b4b" stroke-width="5"/><text x="106.5" y="223.42857142857144" font-size="20" font-weight="800" fill="#ff4b4b">Charges fixes : 415 k€</text><line x1="90.0" y1="520.0" x2="1080.0" y2="69.59398496240601" stroke="#ffe600" stroke-width="5"/><text x="1071.75" y="55.59398496240601" text-anchor="end" font-size="20" font-weight="800" fill="#ffe600">Chiffre d&apos;affaires</text><line x1="715.4927884615385" x2="715.4927884615385" y1="235.42857142857144" y2="520" stroke="#fff" stroke-dasharray="6 6" stroke-width="3"/><circle cx="715.4927884615385" cy="235.42857142857144" r="10" fill="#fff"/><text x="701.4927884615385" y="279.42857142857144" text-anchor="end" font-size="22" font-weight="900" fill="#fff">Point mort : 758</text><line x1="873.75" x2="873.75" y1="163.42857142857144" y2="520" stroke="#3ddc84" stroke-width="3"/><circle cx="873.75" cy="163.42857142857144" r="10" fill="#3ddc84"/><text x="857.75" y="147.42857142857144" text-anchor="end" font-size="22" font-weight="900" fill="#3ddc84">Aujourd&apos;hui : 950</text><text x="296.25" y="396.57142857142856" font-size="22" font-weight="800" fill="#ff4b4b">Perte</text><text x="997.5" y="204.57142857142856" text-anchor="middle" font-size="22" font-weight="800" fill="#3ddc84">EBE</text></svg></div><div class="annexe-d"><div class="abox "><h3>Le principe</h3><p>Le point mort, c'est le nombre d'adhérents à partir duquel le club couvre ses charges fixes : équipe, dirigeant, loyer, charges.</p><p class='formule-a'>charges fixes ÷ CA par adhérent et par an</p></div><div class="abox v"><h3>Iron Park</h3><p>415 k€ ÷ 547 € = <b>758 adhérents</b>. Avec 950, la marge de sécurité est de 192 adhérents, soit 20 %.</p></div><div class="abox j"><h3>Au-delà</h3><p>Chaque adhérent de plus va presque entièrement dans l'EBE : c'est pourquoi un club au-dessus de son point mort vaut cher.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Multiple</span><h2>Pourquoi 4 fois l'EBE, et pas 3 ou 6 ?</h2><p>Ordres de grandeur indicatifs, à ajuster selon le marché local</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><svg viewBox="0 0 1120 600" width="1120" height="600" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><defs><linearGradient id="gm"><stop offset="0" stop-color="#ff4b4b"/><stop offset=".45" stop-color="#ffe600"/><stop offset="1" stop-color="#3ddc84"/></linearGradient></defs><rect x="70" y="120" width="980" height="26" rx="13" fill="url(#gm)"/><text x="70.0" y="190" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">2 ×</text><text x="266.0" y="190" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">3 ×</text><text x="462.0" y="190" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">4 ×</text><text x="658.0" y="190" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">5 ×</text><text x="854.0" y="190" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">6 ×</text><text x="1050.0" y="190" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">7 ×</text><line x1="462.0" x2="462.0" y1="96" y2="170" stroke="#fff" stroke-width="6"/><text x="462.0" y="80" text-anchor="middle" font-size="22" font-weight="900" fill="#fff">Convention du quiz : 4 ×</text><rect x="70.0" y="215" width="196.0" height="10" rx="5" fill="#ff4b4b"/><text x="168.0" y="254" text-anchor="middle" font-size="20" font-weight="700" fill="#ff4b4b">Club fragile</text><rect x="364.0" y="215" width="196.0" height="10" rx="5" fill="#ffe600"/><text x="462.0" y="254" text-anchor="middle" font-size="20" font-weight="700" fill="#ffe600">Club standard</text><rect x="658.0" y="215" width="294.0" height="10" rx="5" fill="#3ddc84"/><text x="805.0" y="254" text-anchor="middle" font-size="20" font-weight="700" fill="#3ddc84">Club solide et autonome</text><text x="70" y="320" font-size="24" font-weight="900" fill="#ff4b4b">Ce qui fait baisser</text><text x="1050" y="320" text-anchor="end" font-size="24" font-weight="900" fill="#3ddc84">Ce qui fait monter</text><text x="70" y="362" font-size="21" fill="#ddd">− Dirigeant indispensable</text><text x="1050" y="362" text-anchor="end" font-size="21" fill="#ddd">Croissance récurrente +</text><text x="70" y="406" font-size="21" fill="#ddd">− Bail court ou cher</text><text x="1050" y="406" text-anchor="end" font-size="21" fill="#ddd">Équipe autonome +</text><text x="70" y="450" font-size="21" fill="#ddd">− CA ou adhérents en baisse</text><text x="1050" y="450" text-anchor="end" font-size="21" fill="#ddd">Bail long, bon emplacement +</text><text x="70" y="494" font-size="21" fill="#ddd">− Churn élevé pour le modèle</text><text x="1050" y="494" text-anchor="end" font-size="21" fill="#ddd">Adhérents fidèles +</text><text x="70" y="538" font-size="21" fill="#ddd">− Matériel à renouveler</text><text x="1050" y="538" text-anchor="end" font-size="21" fill="#ddd">Matériel récent +</text></svg></div><div class="annexe-d"><div class="abox "><h3>Pourquoi un multiple</h3><p>Le prix d'un club, c'est un nombre d'années d'EBE retraité que le repreneur accepte de payer d'avance.</p></div><div class="abox j"><h3>Pourquoi 4 dans le quiz</h3><p>Pour comparer les quatre dossiers sur la même base. Dans la réalité, le multiple dépend du risque et de la tendance.</p></div><div class="abox "><h3>À retenir</h3><p>Deux clubs avec le même EBE peuvent valoir du simple au double. Ce qui compte : l'EBE va-t-il durer sans le cédant ?</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Titres ou fonds</span><h2>Racheter les titres ou le fonds de commerce ?</h2><p>Ce qu'on récupère, et ce que ça change au prix</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><table class="tf"><tr><th></th><th>Rachat des titres<br><small>on achète la société</small></th><th>Rachat du fonds<br><small>on achète l'activité</small></th></tr><tr><td>Adhérents, nom, matériel, bail</td><td class="o">Oui</td><td class="o">Oui</td></tr><tr><td>Salariés</td><td class="o">Oui</td><td class="o">Oui, contrats transférés</td></tr><tr><td>Trésorerie</td><td class="o">Oui</td><td class="x">Non, elle reste au cédant</td></tr><tr><td>Dettes et emprunts</td><td class="x">Oui, à déduire du prix</td><td class="o">Non</td></tr><tr><td>Passé fiscal, social, litiges</td><td class="x">Oui : garantie de passif indispensable</td><td class="o">Non</td></tr><tr><td>Prix</td><td>Valeur − dette nette</td><td>Valeur de l'activité</td></tr><tr><td>Droits d'enregistrement</td><td>Faibles (0,1 % en SAS, 3 % en SARL après abattement)</td><td>Plus élevés (jusqu'à 5 %)</td></tr></table></div><div class="annexe-d"><div class="abox j"><h3>Dans le quiz</h3><p>On rachète les titres : la trésorerie et les dettes font partie de l'affaire, d'où la dette nette.</p></div><div class="abox "><h3>Le choix</h3><p>Titres : plus simple, on garde tout, mais on hérite du passé. Fonds : on repart propre, mais on refait contrats et financement.</p></div><div class="abox r"><h3>À vérifier</h3><p>Taux d'enregistrement et régime fiscal à valider avec l'expert-comptable ou l'avocat au moment de la cession.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Bilan</span><h2>Quatre lignes du bilan qui trompent</h2><p>Exemples tirés du Loft et de Move Factory</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><div class="grille-pieges"><div class="piegebilan"><h4 style="color:#ff4b4b">Créances adhérents</h4><svg viewBox="0 0 220 170" width="220" height="170" font-family="Helvetica Neue, Arial"><rect x="30" y="89" width="60" height="51" rx="6" fill="#666"/><rect x="130" y="20" width="60" height="120" rx="6" fill="#ff4b4b"/><text x="60" y="81" text-anchor="middle" font-size="20" font-weight="800" fill="#ddd">30 k€</text><text x="160" y="12" text-anchor="middle" font-size="20" font-weight="800" fill="#ff4b4b">70 k€</text><text x="60" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">n-1</text><text x="160" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">n</text></svg><p>Ce que les adhérents doivent. En prélèvement mensuel, ça reste stable. Si ça gonfle : des prélèvements rejetés, comptés en CA mais jamais encaissés.</p></div><div class="piegebilan"><h4 style="color:#ff4b4b">Produits constatés d'avance</h4><svg viewBox="0 0 220 170" width="220" height="170" font-family="Helvetica Neue, Arial"><rect x="30" y="20" width="60" height="120" rx="6" fill="#666"/><rect x="130" y="58" width="60" height="82" rx="6" fill="#ff4b4b"/><text x="60" y="12" text-anchor="middle" font-size="20" font-weight="800" fill="#ddd">95 k€</text><text x="160" y="50" text-anchor="middle" font-size="20" font-weight="800" fill="#ff4b4b">65 k€</text><text x="60" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">n-1</text><text x="160" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">n</text></svg><p>À adhérents stables, ça reste stable. Si ça baisse : du CA de l'an prochain déjà pris.</p></div><div class="piegebilan"><h4 style="color:#ff8a3d">Compte courant du dirigeant</h4><svg viewBox="0 0 220 170" width="220" height="170" font-family="Helvetica Neue, Arial"><rect x="30" y="20" width="60" height="120" rx="6" fill="#666"/><rect x="130" y="140" width="60" height="0" rx="6" fill="#ff8a3d"/><text x="60" y="12" text-anchor="middle" font-size="20" font-weight="800" fill="#ddd">40 k€</text><text x="160" y="132" text-anchor="middle" font-size="20" font-weight="800" fill="#ff8a3d">0 k€</text><text x="60" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">n-1</text><text x="160" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">n</text></svg><p>S'il disparaît sans sortie de cash, il a été abandonné : un produit exceptionnel qui gonfle le résultat, une seule fois.</p></div><div class="piegebilan"><h4 style="color:#ffe600">Leasing : la dette cachée</h4><svg viewBox="0 0 220 170" width="220" height="170" font-family="Helvetica Neue, Arial"><rect x="30" y="56" width="60" height="84" rx="6" fill="#666"/><rect x="130" y="20" width="60" height="120" rx="6" fill="#ffe600"/><text x="60" y="48" text-anchor="middle" font-size="20" font-weight="800" fill="#ddd">190 k€</text><text x="160" y="12" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe600">270 k€</text><text x="60" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">emprunt</text><text x="160" y="164" text-anchor="middle" font-size="16" fill="#a8a8a8">+ leasing</text></svg><p>Move Factory affiche 190 k€ d'emprunt, mais doit aussi 80 k€ de leasing. Si on réintègre les loyers dans l'EBE, le reste dû va dans la dette nette.</p></div></div></div><div class="annexe-d"><div class="abox j"><h3>Le réflexe</h3><p>Quand tout monte au compte de résultat, regarder les lignes du bilan qui <b>baissent</b>… et celles qui <b>gonflent</b>.</p></div><div class="abox "><h3>Toujours comparer</h3><p>Une ligne de bilan ne se lit jamais seule : on la compare à l'an dernier et au nombre d'adhérents.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Repères</span><h2>Les repères d'un club sain</h2><p>Ordres de grandeur pour situer un club</p></div>
+  <div class="annexe-corps"><div class="annexe-g"><div class="jauges"><svg viewBox="0 0 1060 124" width="1060" height="124" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><text x="30" y="30" font-size="24" font-weight="800" fill="#fff">Loyer complet / CA</text><text x="1030" y="30" text-anchor="end" font-size="22" font-weight="800" fill="#ffe600">autour de 15 %</text><rect x="30.0" y="52" width="500.0" height="22" fill="#3ddc84"/><rect x="530.0" y="52" width="250.0" height="22" fill="#ffe600"/><rect x="780.0" y="52" width="250.0" height="22" fill="#ff4b4b"/><line x1="530.0" x2="530.0" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="530.0" y="104" text-anchor="middle" font-size="18" fill="#ddd">15 %</text><line x1="780.0" x2="780.0" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="780.0" y="104" text-anchor="middle" font-size="18" fill="#ddd">20 %</text></svg><svg viewBox="0 0 1060 124" width="1060" height="124" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><text x="30" y="30" font-size="24" font-weight="800" fill="#fff">Masse salariale hors dirigeant / CA</text><text x="1030" y="30" text-anchor="end" font-size="22" font-weight="800" fill="#ffe600">30 à 40 %</text><rect x="30.0" y="52" width="285.7142857142857" height="22" fill="#ffe600"/><rect x="315.7142857142857" y="52" width="285.7142857142857" height="22" fill="#3ddc84"/><rect x="601.4285714285714" y="52" width="428.57142857142856" height="22" fill="#ff4b4b"/><line x1="315.7142857142857" x2="315.7142857142857" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="315.7142857142857" y="104" text-anchor="middle" font-size="18" fill="#ddd">30 % low-cost</text><line x1="601.4285714285714" x2="601.4285714285714" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="601.4285714285714" y="104" text-anchor="middle" font-size="18" fill="#ddd">40 % premium</text></svg><svg viewBox="0 0 1060 124" width="1060" height="124" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><text x="30" y="30" font-size="24" font-weight="800" fill="#fff">Churn mensuel</text><text x="1030" y="30" text-anchor="end" font-size="22" font-weight="800" fill="#ffe600">4,5 % en moyenne</text><rect x="30.0" y="52" width="333.3333333333333" height="22" fill="#3ddc84"/><rect x="363.3333333333333" y="52" width="250.00000000000006" height="22" fill="#ffe600"/><rect x="613.3333333333334" y="52" width="416.66666666666663" height="22" fill="#ff4b4b"/><line x1="280.0" x2="280.0" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="280.0" y="104" text-anchor="middle" font-size="18" fill="#ddd">3,5 % familial</text><line x1="446.6666666666667" x2="446.6666666666667" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="446.6666666666667" y="104" text-anchor="middle" font-size="18" fill="#ddd">4,5 %</text><line x1="863.3333333333334" x2="863.3333333333334" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="863.3333333333334" y="104" text-anchor="middle" font-size="18" fill="#ddd">7 % low-cost</text></svg><svg viewBox="0 0 1060 124" width="1060" height="124" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif"><text x="30" y="30" font-size="24" font-weight="800" fill="#fff">Passages par adhérent et par mois</text><text x="1030" y="30" text-anchor="end" font-size="22" font-weight="800" fill="#ffe600">5 et plus</text><rect x="30.0" y="52" width="285.7142857142857" height="22" fill="#ff4b4b"/><rect x="315.7142857142857" y="52" width="142.85714285714283" height="22" fill="#ffe600"/><rect x="458.57142857142856" y="52" width="571.4285714285714" height="22" fill="#3ddc84"/><line x1="315.7142857142857" x2="315.7142857142857" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="315.7142857142857" y="104" text-anchor="middle" font-size="18" fill="#ddd">4</text><line x1="458.57142857142856" x2="458.57142857142856" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="458.57142857142856" y="104" text-anchor="middle" font-size="18" fill="#ddd">5</text><line x1="601.4285714285714" x2="601.4285714285714" y1="46" y2="80" stroke="#fff" stroke-width="3"/><text x="601.4285714285714" y="104" text-anchor="middle" font-size="18" fill="#ddd">6</text></svg></div></div><div class="annexe-d"><div class="abox j"><h3>Comment s'en servir</h3><p>Ces repères situent un club, ils ne le jugent pas. Un ratio hors norme n'est pas une faute : c'est une question à poser.</p></div><div class="abox "><h3>Toujours avec le modèle</h3><p>Un low-cost vit avec un churn élevé et une masse salariale basse. Un premium, l'inverse. On compare un club à ceux de son modèle.</p></div><div class="abox v"><h3>Et l'EBE</h3><p>Le repère qui résume tout : un EBE retraité qui tient sans le dirigeant actuel.</p></div></div></div>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+<section class="ecran annexe">
+  <div class="bande"></div>
+  <div class="annexe-tete"><span class="annexe-tag">Annexe · Les quatre cas</span><h2>Les quatre dossiers du quiz</h2><p>Valeur = 4 × EBE retraité − dette nette · multiple payé = (prix + dette nette) ÷ EBE retraité</p></div>
+  <table class="cas"><tr><th></th><th>Club</th><th>Les pièges</th><th>Leurre</th><th>Prix</th><th>Vraie valeur</th><th>Multiple payé</th></tr><tr><td><span class="ic" style="color:#3ddc84;border-color:#3ddc84">♥</span></td><td style="color:#ffe600"><b>Iron Park</b></td><td>Mise au rebut, trésorerie vidée, dirigeant surpayé</td><td class="n g">314 k€</td><td class="n">420 k€</td><td class="n" style="color:#3ddc84">554 k€</td><td class="n" style="color:#3ddc84">3,1 ×</td></tr><tr><td><span class="ic" style="color:#ff4b4b;border-color:#ff4b4b">✕</span></td><td style="color:#ff8a3d"><b>Le Loft</b></td><td>PCA, impayés, aide qui s'arrête, abandon de compte courant</td><td class="n g">626 k€</td><td class="n">520 k€</td><td class="n" style="color:#ff4b4b">286 k€</td><td class="n" style="color:#ff4b4b">6,3 ×</td></tr><tr><td><span class="ic" style="color:#ff4b4b;border-color:#ff4b4b">✕</span></td><td style="color:#5ad8e6"><b>Kinetik</b></td><td>Croissance en trompe-l'œil, deux tarifs, aide, dirigeant sous-payé, loyer au marché</td><td class="n g">401 k€</td><td class="n">280 k€</td><td class="n" style="color:#ff4b4b">153 k€</td><td class="n" style="color:#ff4b4b">7,2 ×</td></tr><tr><td><span class="ic" style="color:#3ddc84;border-color:#3ddc84">♥</span></td><td style="color:#a6f04a"><b>Move Factory</b></td><td>Amortissements, litige, couple, churn low-cost, leasing</td><td class="n g">360 k€</td><td class="n">460 k€</td><td class="n" style="color:#3ddc84">644 k€</td><td class="n" style="color:#3ddc84">3,1 ×</td></tr></table>
+  <div class="pied"><span>PIMP MY GYM · MARBELLA · ANNEXES</span><span>X : SOMMAIRE DES ANNEXES / RETOUR AU QUIZ</span></div>
+</section>
+
+
+<script>
+(function () {
+  function echelle() { var st = document.getElementById('stage'); var k = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); st.style.transform = 'translate(-50%,-50%) scale(' + k + ')'; }
+  window.addEventListener('resize', echelle); echelle();
+  var ecrans = Array.prototype.slice.call(document.querySelectorAll('.ecran'));
+  var index = 0, chronoTimer = null, enCours = false;
+  // état par dossier : { vote, etape } ; etape -2 = carte, -1 = écran de vote, 0 = leurre, 1..n = lignes de calcul, n+1 = tip
+  var etat = {};
+
+
+  // ---------- son ----------
+  var ctx = null, muet = false;
+  function audio() { if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ctx && ctx.state === 'suspended') ctx.resume(); return ctx; }
+  function ton(f1, f2, dur, type, vol) {
+    if (muet) return; var c = audio(); if (!c) return;
+    var o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  function whoosh() {
+    if (muet) return; var c = audio(); if (!c) return;
+    var n = c.sampleRate * .45, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    var src = c.createBufferSource(); src.buffer = b;
+    var f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2; var t = c.currentTime;
+    f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(3500, t + .4);
+    var g = c.createGain(); g.gain.value = .5;
+    src.connect(f); f.connect(g); g.connect(c.destination); src.start(t);
+  }
+  function ding() { ton(880, 880, .9, 'sine', .35); setTimeout(function () { ton(1320, 1320, .9, 'sine', .25); }, 120); }
+  function buzz() { ton(140, 110, .6, 'sawtooth', .22); }
+  function tic() { ton(1800, 1500, .05, 'square', .08); }
+
+  // ---------- jauge ----------
+  function jauge(e, on) {
+    var j = e.querySelector('.jauge'); if (!j) return;
+    var prix = +e.dataset.prix, val = +e.dataset.valeur, naif = +e.dataset.naif;
+    var max = Math.max(prix, val, naif) * 1.15;
+    var pc = function (v) { return (v / max * 100) + '%'; };
+    var mp = j.querySelector('.mk-prix'), mn = j.querySelector('.mk-naif'), mv = j.querySelector('.mk-vraie'), z = j.querySelector('.zone');
+    mp.style.left = pc(prix); mp.querySelector('b').textContent = prix + ' k€';
+    mn.style.left = pc(naif); mn.querySelector('b').textContent = naif + ' k€'; mn.querySelector('span').textContent = e.dataset.naifLabel; var fn = naif / max < .2 ? 'd' : (naif / max > .8 ? 'g' : (naif > val ? 'd' : 'g')); mn.className = 'mk mk-naif ' + fn;
+    var cls = val >= prix ? 'gain' : 'perte';
+    var fv = val / max < .2 ? 'd' : (val / max > .8 ? 'g' : (naif > val ? 'g' : 'd')); mv.className = 'mk mk-vraie ' + cls + ' ' + fv; mv.querySelector('b').textContent = val + ' k€';
+    z.className = 'zone ' + cls;
+    if (!on) { j.classList.remove('on'); mv.style.transition = 'none'; mv.style.left = pc(naif); z.style.transition = 'none'; z.style.left = pc(Math.min(prix, naif)); z.style.width = pc(Math.abs(naif - prix)); return; }
+    if (j.classList.contains('on')) return;
+    j.classList.add('on'); void mv.offsetWidth;
+    mv.style.transition = ''; z.style.transition = '';
+    setTimeout(function () { mv.style.left = pc(val); z.style.left = pc(Math.min(prix, val)); z.style.width = pc(Math.abs(val - prix)); }, 350);
+  }
+
+  // ---------- indice ----------
+  function indice(e, on) {
+    e.querySelectorAll('.indice').forEach(function (l) { l.classList.remove('indice'); });
+    e.classList.toggle('avec-indice', !!on);
+    if (on) { var l = e.querySelector('.carte [data-l="' + e.dataset.indice + '"]'); if (l) l.classList.add('indice'); }
+  }
+
+  function dossier(e) { return e.getAttribute('data-dossier'); }
+  function lignes(e) { return Array.prototype.slice.call(e.querySelectorAll('.calcul li')); }
+
+  function allumer(e, refs) {
+    e.querySelectorAll('[data-l]').forEach(function (l) { l.classList.remove('hl'); });
+    refs.forEach(function (r) { var l = e.querySelector('[data-l="' + r + '"]'); if (l) l.classList.add('hl'); });
+  }
+
+  function rendre(e) {
+    var d = dossier(e); if (!d) return;
+    var s = etat[d] || (etat[d] = { vote: null, etape: -2 });
+    var ls = lignes(e), tip = e.querySelector('.tip'), n = ls.length;
+    e.classList.toggle('en-vote', s.etape === -1);
+    if (s.etape !== -2) indice(e, false);
+    jauge(e, s.etape > n);
+    e.classList.toggle('sans-leurre', s.etape >= 2);
+    if (s.etape < 0) {
+      e.classList.remove('revele', 'page2'); allumer(e, []); ls.forEach(function (l) { l.classList.remove('on'); }); tip.classList.remove('on');
+      e.querySelector('.pied span:last-child').textContent = s.etape === -1 ? 'VOTE' : 'LECTURE';
+      if (s.etape === -1) arreterChrono();
+      return;
+    }
+    e.classList.add('revele');
+    e.querySelector('.pied span:last-child').textContent = 'RÉVÉLATION';
+    var m = e.querySelector('.match'), verdict = e.getAttribute('data-verdict');
+    m.className = 'match';
+    if (s.vote) { var ok = s.vote === verdict; m.textContent = (s.vote === 'achete' ? 'La salle a acheté. ' : 'La salle a passé. ') + (ok ? 'Match.' : 'Pas de match.'); m.classList.add(ok ? 'oui' : 'non'); }
+    ls.forEach(function (l, i) { l.classList.toggle('on', i < s.etape); });
+    tip.classList.toggle('on', s.etape > n);
+    e.classList.toggle('page2', s.etape > n);
+    if (s.etape === 0) allumer(e, e.getAttribute('data-leurre').split(','));
+    else if (s.etape <= n) allumer(e, ls[s.etape - 1].getAttribute('data-ref').split(','));
+    else allumer(e, []);
+  }
+
+  function afficher(i) {
+    if (i < 0 || i >= ecrans.length) return;
+    ecrans[index].classList.remove('actif');
+    index = i; var e = ecrans[index]; e.classList.add('actif');
+    arreterChrono();
+    if (dossier(e)) { if (!etat[dossier(e)]) etat[dossier(e)] = { vote: null, etape: -2 }; var t = e.querySelector('.tampon'); t.className = 'tampon'; t.textContent = ''; rendre(e); var s0 = etat[dossier(e)]; if (!s0 || s0.etape === -2) lancerChrono(); }
+  }
+
+  function suivant() {
+    var e = ecrans[index], d = dossier(e);
+    if (!d) { afficher(index + 1); return; }
+    var s = etat[d] || (etat[d] = { vote: null, etape: -2 });
+    var max = lignes(e).length + 1;
+    if (s.etape >= max) { afficher(index + 1); return; }
+    s.etape++; rendre(e);
+  }
+  function precedent() {
+    var e = ecrans[index], d = dossier(e);
+    if (!d) { afficher(index - 1); return; }
+    var s = etat[d] || (etat[d] = { vote: null, etape: -2 });
+    if (s.etape <= -2) { afficher(index - 1); return; }
+    s.etape--; rendre(e);
+  }
+
+  function voter(sens) {
+    if (enCours) return;
+    var e = ecrans[index], d = dossier(e); if (!d) return;
+    var s = etat[d] || (etat[d] = { vote: null, etape: -2 });
+    if (s.etape >= 0) return;
+    if (s.etape === -2) { s.etape = -1; rendre(e); }
+    enCours = true; s.vote = sens; if (chronoTimer) { clearInterval(chronoTimer); chronoTimer = null; }
+    var t = e.querySelector('.vote .tampon');
+    t.textContent = sens === 'achete' ? "J'ACHÈTE" : 'JE PASSE';
+    t.className = 'tampon visible ' + sens; whoosh();
+    setTimeout(function () { t.className = 'tampon'; s.etape = 0; rendre(e); enCours = false; if (s.vote === e.getAttribute('data-verdict')) ding(); else buzz(); }, 1300);
+  }
+
+  var DUREE = 150, reste = DUREE, enPause = false;
+  function fmt(t) { return Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60); }
+  function afficherChrono(m) {
+    var r = m.querySelector('.reste'), bar = m.querySelector('.barre');
+    r.textContent = (enPause ? '⏸ ' : '') + fmt(reste);
+    bar.style.width = (reste / DUREE * 100) + '%';
+    m.classList.toggle('pause', enPause);
+    m.classList.toggle('urgent', !enPause && reste <= 10 && reste > 0);
+  }
+  function tictac() {
+    var m = ecrans[index].querySelector('.minuteur'); if (!m) return;
+    chronoTimer = setInterval(function () {
+      reste--; afficherChrono(m);
+      if (reste <= 10 && reste > 0) tic();
+      if (reste <= 0) {
+        clearInterval(chronoTimer); chronoTimer = null; m.classList.remove('urgent'); m.classList.add('fin'); buzz();
+        m.querySelector('.reste').textContent = 'Votez';
+        var e = ecrans[index], d = dossier(e); if (d && etat[d] && etat[d].etape === -2) { etat[d].etape = -1; rendre(e); }
+      }
+    }, 1000);
+  }
+  function lancerChrono() {
+    var m = ecrans[index].querySelector('.minuteur'); if (!m) return;
+    arreterChrono(); reste = DUREE; enPause = false; m.classList.remove('fin'); afficherChrono(m); tictac();
+  }
+  function pauseChrono() {
+    var e = ecrans[index], m = e.querySelector('.minuteur'), d = dossier(e); if (!m || !d || !etat[d] || etat[d].etape !== -2) return;
+    if (m.classList.contains('fin')) return;
+    if (enPause) { enPause = false; afficherChrono(m); tictac(); }
+    else { if (chronoTimer) { clearInterval(chronoTimer); chronoTimer = null; } enPause = true; afficherChrono(m); }
+  }
+  function arreterChrono() {
+    if (chronoTimer) { clearInterval(chronoTimer); chronoTimer = null; }
+    enPause = false; reste = DUREE;
+    ecrans.forEach(function (e) { var m = e.querySelector('.minuteur'); if (m) { m.classList.remove('en-cours', 'fin', 'urgent', 'pause'); m.querySelector('.reste').textContent = fmt(DUREE); m.querySelector('.barre').style.width = '100%'; } });
+  }
+
+
+  var retourQuiz = null;
+  function indexSommaire() { for (var i = 0; i < ecrans.length; i++) if (ecrans[i].classList.contains('sommaire-annexes')) return i; return -1; }
+  function basculerAnnexes() {
+    var is = indexSommaire(); if (is < 0) return;
+    if (ecrans[index].classList.contains('annexe')) { if (retourQuiz !== null) { var r = retourQuiz; retourQuiz = null; afficher(r); } else afficher(is - 1); }
+    else { retourQuiz = index; afficher(is); }
+  }
+
+  document.addEventListener('keydown', function (ev) {
+    var k = ev.key; audio();
+    if (k === 'ArrowRight' || k === ' ' || k === 'PageDown') { ev.preventDefault(); suivant(); }
+    else if (k === 'ArrowLeft' || k === 'PageUp') { ev.preventDefault(); precedent(); }
+    else if (k === 'a' || k === 'A') voter('achete');
+    else if (k === 'p' || k === 'P') voter('passe');
+    else if (k === 't' || k === 'T') pauseChrono();
+    else if (k === 'r' || k === 'R') { var e0 = ecrans[index], d0 = dossier(e0); if (d0 && etat[d0] && etat[d0].etape === -2) lancerChrono(); }
+    else if (k === 's' || k === 'S') { muet = !muet; document.body.classList.toggle('muet', muet); }
+    else if (k === 'i' || k === 'I') { var e = ecrans[index], d = dossier(e); if (d && etat[d] && etat[d].etape === -2) indice(e, !e.classList.contains('avec-indice')); }
+    else if (k === 'h' || k === 'H') document.body.classList.toggle('aide-visible');
+    else if (k === 'Home') afficher(0);
+    else if (k === 'x' || k === 'X') basculerAnnexes();
+    else if (k === 'f' || k === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }
+  });
+  document.addEventListener('click', function (ev) {
+    var tu = ev.target.closest('.tuile'); if (tu) { afficher(indexSommaire() + (+tu.dataset.go)); return; }
+    if (ev.target.closest('.minuteur .reste')) { pauseChrono(); return; }
+    if (ev.target.closest('.oui')) { voter('achete'); return; }
+    if (ev.target.closest('.non')) { voter('passe'); return; }
+    suivant();
+  });
+})();
+</script>
+</div>
+</body>
+</html>

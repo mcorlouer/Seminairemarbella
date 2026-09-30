@@ -288,6 +288,7 @@
       <div class="puce"><i class="n"></i>100 000 €</div>
     </div>
     <div class="outils">
+      <button class="btn-rond" id="plein-ecran" title="Plein écran">⛶</button>
       <button class="btn-rond" id="son" title="Son">🔔</button>
       <button class="btn-rond" id="retourner" title="Retourner l'affichage">⟲</button>
     </div>
@@ -499,6 +500,22 @@
   $('demarrer').addEventListener('click', function () { audio(); veille(); $('accueil').style.display = 'none'; });
   $('son').addEventListener('click', function () { sonActif = !sonActif; this.textContent = sonActif ? '🔔' : '🔕'; if (sonActif) note(880, 0, .3, .12); });
   $('retourner').addEventListener('click', function () { document.body.classList.toggle('retourne'); });
+
+
+  // ---------- Plein écran ----------
+  function estPleinEcran() { return document.fullscreenElement || document.webkitFullscreenElement; }
+  function autonome() { return window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches; }
+  function majBoutonPE() { $('plein-ecran').textContent = estPleinEcran() ? '✕' : '⛶'; if (autonome()) $('plein-ecran').style.display = 'none'; }
+  $('plein-ecran').addEventListener('click', function () {
+    var el = document.documentElement;
+    if (estPleinEcran()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    var f = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (f) { try { var r = f.call(el); if (r && r.catch) r.catch(aidePE); } catch (e) { aidePE(); } }
+    else aidePE();
+  });
+  function aidePE() { alert('Plein écran non disponible ici.\n\nPour l\'avoir : dans Safari, touche « Partager », puis « Sur l\'écran d\'accueil ». L\'icône « Mise à prix » s\'ouvrira en plein écran.'); }
+  document.addEventListener('fullscreenchange', majBoutonPE); document.addEventListener('webkitfullscreenchange', majBoutonPE);
+  majBoutonPE();
 
   // ---------- Onglets ----------
   document.querySelectorAll('nav button[data-ecran]').forEach(function (b) {
